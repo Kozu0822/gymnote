@@ -11,7 +11,7 @@ let state = {
   deletedIds: {},
   settings: {
     weight: 70,
-    // AI 模型提供方：'claude'（默认，推理/结构化输出更强）或 'gemini'
+    // AI 模型提供方：'claude'（默认，推理/结构化输出更强）、'gemini' 或 'openai'
     apiProvider: 'claude',
     apiKey: '',
     // 各提供方各自保存一份 Key，切换时互不覆盖
@@ -26,7 +26,7 @@ let state = {
 };
 
 // ==========================================================================
-// AI 模型提供方配置（Claude / Gemini），供设置页动态填充模型下拉、决定请求方式
+// AI 模型提供方配置（Claude / Gemini / OpenAI），供设置页动态填充模型下拉、决定请求方式
 // ==========================================================================
 const AI_PROVIDERS = {
   claude: {
@@ -52,6 +52,19 @@ const AI_PROVIDERS = {
     models: [
       { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (速度快)' },
       { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (推理能力强)' }
+    ]
+  },
+  openai: {
+    label: 'ChatGPT (OpenAI)',
+    coachName: 'ChatGPT 教练',
+    keyLabel: 'OpenAI API Key',
+    keyPlaceholder: 'sk-proj-...',
+    defaultModel: 'gpt-5.6-sol',
+    hint: '在 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI Platform</a> 创建 API Key。ChatGPT 订阅不包含 API 用量，API 费用按实际调用另计。',
+    models: [
+      { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol（训练分析 / 菜单推荐）' },
+      { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra（速度与质量均衡）' },
+      { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna（轻量快速问答）' }
     ]
   }
 };
@@ -1812,55 +1825,83 @@ function renderBodyPartStats() {
 }
 
 // ---- 恢复进度 (Recovery) ----
-// 每个部位练到力竭后大致的完全恢复时长（小时）。参考普遍的训练恢复窗口：
-// 大肌群(腿/胸/背) 48-72h，小肌群(肩/臂) 约48h，核心恢复快，有氧系统次日即可恢复
+// 这是「训练日志驱动的疲劳估算」，不是医学诊断。大肌群(腿/胸/背) 48-72h，
+// 小肌群(肩/臂)约48h，核心更快，有氧系统通常次日恢复。
 const RECOVERY_HOURS = {
   '腿部': 72, '胸部': 60, '背部': 60, '肩部': 48, '手臂': 48, '核心': 36, '有氧': 24
 };
 
-// 单次训练的疲劳系数：组数越多越接近力竭。打卡记录只有日期没有时刻，
-// 统一按当天中午12点计算经过时长，保证同一天内多次查看结果一致（确定性）
+// 主肌群权重为 1，协同肌群按较低权重计入。以前「手臂」只认牧师椅，
+// 会漏掉胸推 / 肩推 / 高位下拉带来的肱三头或肱二头疲劳，因而很容易长期显示 100%。
+const RECOVERY_MUSCLE_CONTRIBUTIONS = {
+  leg_press: [{ part: '腿部', weight: 1 }],
+  shoulder_press: [{ part: '肩部', weight: 1 }, { part: '手臂', weight: 0.3 }, { part: '胸部', weight: 0.15 }],
+  chest_press: [{ part: '胸部', weight: 1 }, { part: '手臂', weight: 0.35 }, { part: '肩部', weight: 0.25 }],
+  preacher_curl: [{ part: '手臂', weight: 1 }],
+  lat_pulldown: [{ part: '背部', weight: 1 }, { part: '手臂', weight: 0.45 }],
+  situps: [{ part: '核心', weight: 1 }],
+  spin_bike: [{ part: '有氧', weight: 1 }, { part: '腿部', weight: 0.3 }],
+  treadmill: [{ part: '有氧', weight: 1 }, { part: '腿部', weight: 0.35 }]
+};
+
+// 单次训练的起始疲劳。日志没有 RPE、力竭与具体结束时间，故意不把普通 3 组
+// 直接判作 0% 恢复；组数 / 时长越高，疲劳越高。
 function workoutFatigueFactor(w) {
   const d = w.details || {};
   if (CARDIO_TYPES.includes(w.type)) {
     const t = d.time || 0;
-    return t >= 30 ? 1.0 : t >= 15 ? 0.8 : 0.6;
+    return t >= 60 ? 0.7 : t >= 45 ? 0.58 : t >= 30 ? 0.46 : t >= 15 ? 0.32 : 0.2;
   }
   // 力量：多重量组时按总组数衡量疲劳（各组组数相加）
   const sets = WEIGHTED_STRENGTH.includes(w.type)
     ? getStrengthGroups(d).reduce((s, g) => s + (g.sets || 0), 0)
     : (d.sets || 0);
-  return sets >= 3 ? 1.0 : sets === 2 ? 0.85 : 0.6;
+  return sets >= 7 ? 0.85 : sets >= 5 ? 0.7 : sets >= 3 ? 0.55 : sets === 2 ? 0.42 : 0.28;
+}
+
+function getRecoveryInputFingerprint() {
+  // 用恢复相关的输入做签名。新增、编辑或删除训练后，旧 AI 覆盖值会自动失效。
+  return state.workouts
+    .map(w => `${w.id}|${w.date}|${w.type}|${JSON.stringify(w.details || {})}|${w.notes || ''}`)
+    .sort()
+    .join('~');
 }
 
 // 计算所有部位当前的恢复百分比 (0-100，算法确定性输出)
 function computeRecoveryStatus() {
   const now = new Date();
-  const results = {};
+  const fatigueByPart = {};
+  Object.keys(RECOVERY_HOURS).forEach(part => { fatigueByPart[part] = 0; });
 
-  Object.keys(RECOVERY_HOURS).forEach(part => { results[part] = 100; });
-
-  // 只看最近7天的记录，更早的必然已完全恢复
+  // 只看最近10天的记录；超过最长恢复窗口后自然不会留下疲劳。
   const cutoff = new Date(now);
-  cutoff.setDate(cutoff.getDate() - 7);
+  cutoff.setDate(cutoff.getDate() - 10);
   const cutoffStr = getLocalDateString(cutoff);
 
   state.workouts.forEach(w => {
     if (w.date < cutoffStr) return;
-    const part = BODY_PART_MAP[w.type];
-    if (!RECOVERY_HOURS[part]) return; // 放松恢复/其他不产生疲劳
+    const contributions = RECOVERY_MUSCLE_CONTRIBUTIONS[w.type] || [];
+    if (contributions.length === 0) return; // 放松恢复 / 自定义项目不做臆测
 
     const workoutTime = parseLocalDate(w.date);
-    workoutTime.setHours(12, 0, 0, 0);
+    // 记录没有具体时刻时，把当天训练视作刚完成，避免晨间查看时出现负经过时间。
+    workoutTime.setHours(20, 0, 0, 0);
     const elapsedHours = Math.max(0, (now - workoutTime) / 3600000);
-    const recoveryHours = RECOVERY_HOURS[part];
+    const baseFatigue = workoutFatigueFactor(w);
 
-    // 残余疲劳 = 疲劳系数 × (1 - 已恢复比例)，多次训练叠加
-    const residual = workoutFatigueFactor(w) * Math.max(0, 1 - elapsedHours / recoveryHours);
-    results[part] = Math.max(0, results[part] - Math.round(residual * 100));
+    contributions.forEach(({ part, weight }) => {
+      const recoveryHours = RECOVERY_HOURS[part];
+      if (!recoveryHours) return;
+      // 多次训练按剩余疲劳叠加；最大封顶 90%，让页面不把一般训练误显示成「完全报废」。
+      const residual = baseFatigue * weight * Math.max(0, 1 - elapsedHours / recoveryHours);
+      fatigueByPart[part] = Math.min(0.9, fatigueByPart[part] + residual);
+    });
   });
 
-  return results;
+  return Object.fromEntries(Object.entries(fatigueByPart).map(([part, fatigue]) => [
+    part,
+    Math.max(10, Math.min(100, Math.round((1 - fatigue) * 100 / 5) * 5))
+  ]));
 }
 
 function recoveryStatusLabel(pct) {
@@ -1890,7 +1931,9 @@ function renderRecoveryStatus() {
       }
     });
   }
-  const hasAi = Object.keys(aiParts).length > 0;
+  // AI 分析是一次性的快照；训练记录改变后，旧结论不能继续覆盖实时算法。
+  const isAiCurrent = aiData && aiData.workoutFingerprint === getRecoveryInputFingerprint();
+  const hasAi = isAiCurrent && Object.keys(aiParts).length > 0;
 
   if (sourceLabel) {
     if (hasAi && aiData.updatedAt) {
@@ -2257,9 +2300,24 @@ function buildBodyMetricsPromptLine() {
   return `- 最近体测 (${m.date}): ${parts.join('，')}\n`;
 }
 
-function generateWorkoutSummaryPrompt() {
+function shouldFocusOnToday(userText, mode) {
+  // 「今天 / 今日 / 本次 / 刚刚」只应分析当天日志，避免旧记录在回答里喧宾夺主。
+  return mode === 'analysis' && /今天|今日|当天|本次|刚才|刚刚/.test(userText || '');
+}
+
+function getWorkoutPromptRecords({ focusToday = false } = {}) {
+  const today = getLocalDateString();
+  const sorted = [...state.workouts].sort((a, b) => {
+    const dateCompare = String(b.date).localeCompare(String(a.date));
+    if (dateCompare !== 0) return dateCompare;
+    return String(b.id || '').localeCompare(String(a.id || ''));
+  });
+  return focusToday ? sorted.filter(w => w.date === today) : sorted.slice(0, 30);
+}
+
+function generateWorkoutSummaryPrompt({ focusToday = false } = {}) {
   const weight = state.settings.weight || 70;
-  const recentWorkouts = state.workouts.slice(0, 30); // 提取最近 30 次记录
+  const recentWorkouts = getWorkoutPromptRecords({ focusToday });
 
   const equipmentListStr = EQUIPMENT_ROSTER.map(e => `- ${e.label}：${e.note}`).join("\n");
 
@@ -2277,7 +2335,10 @@ ${equipmentListStr}
 【我的个人档案】
 - 体重: ${weight} kg
 ${buildBodyMetricsPromptLine()}
-【我最近的健身打卡历史 (最新排在最前)】
+【本次分析的数据范围】
+${focusToday ? `仅限今天（${getLocalDateString()}）的训练记录。不要把之前日期的打卡混进「今天的训练分析」；若今天没有记录，要直接说明。` : '最近 30 条训练记录（最新排在最前）。'}
+
+【训练打卡记录】
 `;
 
   if (recentWorkouts.length === 0) {
@@ -2320,14 +2381,12 @@ ${buildBodyMetricsPromptLine()}
     });
   }
 
-  prompt += `
-【请帮我分析以下几点】
-1. 分析我近期力量训练（腿举、胸推、肩推等）和有氧运动（跑步机、单车）的分配比例是否科学？
-2. 在力量训练的负荷与渐进性超负荷方面，有没有发现我的进步趋势或需要调整的地方？
-3. 从脂肪燃烧、肌肉增长或体能改善的角度，给我推荐一套接下来两周在 ChocoZAP 器材上的健身动作顺序和强度建议（同样必须只使用上面清单里的器材）。
-4. 结合我的体重，指出有氧运动中热量消耗效率的表现。
+  prompt += focusToday ? `
+请只依据「今天」的记录回答本轮提问。先给今天训练的结论，再说是否适合补练、休息或做轻有氧；不要复述、更不要比较之前日期的记录。`
+    : `
+请结合近期记录回答本轮提问；需要比较趋势时，明确指出使用了哪些日期的数据。`;
 
-请用极其鼓励的口吻回答我，排版美观，使用 emoji 增加活力！`;
+  prompt += `\n回答要直接、具体、不过度承诺；涉及疼痛、受伤或明显不适时，建议停止加练并咨询专业人士。`;
 
   return prompt;
 }
@@ -2432,6 +2491,7 @@ function extractAiRecoveryFromReply(text) {
 function applyAiRecoveryAnalysis(recovery) {
   localStorage.setItem("chocozap_recovery_ai", JSON.stringify({
     updatedAt: Date.now(),
+    workoutFingerprint: getRecoveryInputFingerprint(),
     summary: recovery.summary,
     parts: recovery.parts
   }));
@@ -3198,6 +3258,45 @@ async function requestClaude(model, systemPromptText, messages, mode) {
   return (data.content || []).filter(b => b.type === 'text').map(b => b.text || "").join("");
 }
 
+// 直连 OpenAI Responses API。为了与 Claude/Gemini 保持相同的无后端部署方式，Key 仅留在本机浏览器。
+async function requestOpenAI(model, systemPromptText, messages, mode) {
+  const input = [
+    { role: 'developer', content: [{ type: 'input_text', text: systemPromptText }] },
+    ...messages.map(m => ({
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: [{ type: m.role === 'user' ? 'input_text' : 'output_text', text: m.text }]
+    }))
+  ];
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${getActiveApiKey()}`
+    },
+    body: JSON.stringify({
+      model,
+      input,
+      max_output_tokens: 4096,
+      text: { verbosity: 'medium' },
+      // 身体分析需要更稳定地遵守 JSON 输出；普通聊天优先降低等待与费用。
+      reasoning: { effort: mode === 'analysis' ? 'medium' : 'low' },
+      store: false
+    })
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error((data.error && data.error.message) || '请求 OpenAI 失败，请检查 API Key 与账户额度。');
+  }
+  const text = data.output_text || (data.output || [])
+    .filter(item => item.type === 'message')
+    .flatMap(item => item.content || [])
+    .filter(item => item.type === 'output_text')
+    .map(item => item.text || '')
+    .join('');
+  if (!text) throw new Error('OpenAI 没有返回可显示的文本。');
+  return text;
+}
+
 // 直连 Google Gemini API
 async function requestGemini(model, systemPromptText, messages, mode) {
   const conversationTurns = messages.map(m => ({
@@ -3248,12 +3347,16 @@ async function callAiCoach(userText, { mode }) {
 
   // 3. 系统指令：健身数据背景 + 器材白名单是所有模式的公共底座；
   //    菜单模式追加结构化训练计划输出格式，分析模式追加恢复分析输出格式
-  let systemPromptText = generateWorkoutSummaryPrompt();
+  const focusToday = shouldFocusOnToday(userText, mode);
+  let systemPromptText = generateWorkoutSummaryPrompt({ focusToday });
   if (mode === 'menu') systemPromptText += "\n" + buildStructuredPlanInstruction();
   if (mode === 'analysis') systemPromptText += "\n" + buildRecoveryAnalysisInstruction();
 
-  // 4. 当前会话历史（真正的"继续聊下去"）
-  const history = session.messages.slice();
+  // 4. 训练菜单与身体分析是「当前数据快照」任务，不能把前几天的聊天和旧 JSON
+  //    继续发送进去。自由聊天则保留最近 12 条信息以支持正常的追问。
+  const history = mode === 'chat'
+    ? session.messages.slice(-12)
+    : [{ role: 'user', name: '你', text: userText }];
 
   // 5. 显示 AI 正在思考 (Typing...)
   const pendingText = mode === 'menu' ? "正在为你安排训练菜单，请稍候..."
@@ -3264,7 +3367,9 @@ async function callAiCoach(userText, { mode }) {
   try {
     const rawReplyText = provider === 'gemini'
       ? await requestGemini(model, systemPromptText, history, mode)
-      : await requestClaude(model, systemPromptText, history, mode);
+      : provider === 'openai'
+        ? await requestOpenAI(model, systemPromptText, history, mode)
+        : await requestClaude(model, systemPromptText, history, mode);
 
     removeMessage(tempBubbleId);
     let displayText = rawReplyText;
