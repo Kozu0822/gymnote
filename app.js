@@ -59,12 +59,12 @@ const AI_PROVIDERS = {
     coachName: 'ChatGPT 教练',
     keyLabel: 'OpenAI API Key',
     keyPlaceholder: 'sk-proj-...',
-    defaultModel: 'gpt-5.6-sol',
-    hint: '在 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI Platform</a> 创建 API Key。ChatGPT 订阅不包含 API 用量，API 费用按实际调用另计。',
+    defaultModel: 'gpt-5.4-mini',
+    hint: '在 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI Platform</a> 创建 API Key。当前模型都在你的共享流量免费额度池内；ChatGPT 订阅与 API 用量仍分开计算。',
     models: [
-      { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol（训练分析 / 菜单推荐）' },
-      { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra（速度与质量均衡）' },
-      { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna（轻量快速问答）' }
+      { id: 'gpt-5.4-mini', name: 'GPT-5.4 mini（默认：日常教练 / 免费 250万）' },
+      { id: 'gpt-5.4', name: 'GPT-5.4（深度训练分析 / 免费 25万）' },
+      { id: 'gpt-5.4-nano', name: 'GPT-5.4 nano（轻量快速问答 / 免费 250万）' }
     ]
   }
 };
