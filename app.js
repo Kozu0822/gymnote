@@ -59,12 +59,12 @@ const AI_PROVIDERS = {
     coachName: 'ChatGPT 教练',
     keyLabel: 'OpenAI API Key',
     keyPlaceholder: 'sk-proj-...',
-    defaultModel: 'gpt-5.4-mini',
-    hint: '在 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI Platform</a> 创建 API Key。当前模型都在你的共享流量免费额度池内；ChatGPT 订阅与 API 用量仍分开计算。',
+    defaultModel: 'gpt-5.6-terra',
+    hint: '在 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI Platform</a> 创建 API Key。开启「Share inputs and outputs with OpenAI」且账户有正余额后，以下模型的共享流量会自动计入免费额度池；ChatGPT 订阅与 API 用量仍分开计算。',
     models: [
-      { id: 'gpt-5.4-mini', name: 'GPT-5.4 mini（默认：日常教练 / 免费 250万）' },
-      { id: 'gpt-5.4', name: 'GPT-5.4（深度训练分析 / 免费 25万）' },
-      { id: 'gpt-5.4-nano', name: 'GPT-5.4 nano（轻量快速问答 / 免费 250万）' }
+      { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra（默认：日常教练 / 免费 250万）' },
+      { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol（深度训练复盘 / 免费 25万）' },
+      { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna（轻量快速问答 / 免费 250万）' }
     ]
   }
 };
@@ -3223,7 +3223,9 @@ async function requestBodyAnalysis() {
 // 取当前提供方对应的 API Key
 function getActiveApiKey() {
   const provider = getAiProvider();
-  return (state.settings.apiKeys && state.settings.apiKeys[provider]) || state.settings.apiKey || '';
+  // Key 必须严格按提供方取用，不能把 Claude / Gemini 的 Key 误发给 OpenAI。
+  // 旧版单一 apiKey 会在 loadData() 中迁移到 apiKeys[当前提供方]。
+  return (state.settings.apiKeys && state.settings.apiKeys[provider]) || '';
 }
 
 // 直连 Anthropic Claude Messages API（浏览器端直连需带 anthropic-dangerous-direct-browser-access 头）
