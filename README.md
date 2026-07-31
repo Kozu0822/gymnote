@@ -55,7 +55,7 @@
 
 - **Claude（默认，推荐）**：在 [Anthropic 控制台](https://console.anthropic.com/settings/keys) 申请 API Key（`sk-ant-...`），默认模型 Claude Opus 4.8，可选 Sonnet 5 / Haiku 4.5
 - **Gemini**：在 [Google AI Studio](https://aistudio.google.com/apikey) 免费申请 API Key（`AIzaSy...`），可选 Gemini 2.5 Flash / 2.5 Pro
-- **ChatGPT（OpenAI）**：在 [OpenAI Platform](https://platform.openai.com/api-keys) 创建 API Key（`sk-proj-...`）。默认 GPT-5.6 Sol，适合训练菜单与恢复分析；Terra 适合日常聊天的速度/质量平衡；Luna 适合轻量、快速问答。ChatGPT Plus/Pro 订阅与 API 用量分开计费。
+- **ChatGPT（OpenAI）**：在 [OpenAI Platform](https://platform.openai.com/api-keys) 创建 API Key（`sk-proj-...`）。如果已开启与 OpenAI 共享流量的免费额度，默认 GPT-5.4 mini（250万 token/天）很适合日常教练；GPT-5.4（25万 token/天）适合深度训练分析；GPT-5.4 nano（250万 token/天）适合轻量、快速问答。ChatGPT Plus/Pro 订阅与 API 用量分开计费。
 
 打开应用「设置」页选择提供方并粘贴对应 Key，即可在「AI教练」页直接对话。三家的 Key 各自独立保存，切换提供方互不覆盖。
 
