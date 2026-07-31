@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=1.5.0">
+  <link rel="stylesheet" href="style.css?v=1.6.0">
 </head>
 <body>
   <!-- 动态流体液体背景 -->
@@ -423,13 +423,14 @@
         <!-- AI 配置卡 -->
         <div class="glass settings-card">
           <h3>🤖 AI 健身教练配置</h3>
-          <p class="settings-desc">默认直连 <strong>Anthropic Claude</strong>（推理与结构化输出更强，更适合训练菜单与恢复分析），也可切换回 Google Gemini。API Key 仅保存在本地浏览器中，不上传任何服务器。</p>
+          <p class="settings-desc">支持 Anthropic Claude、Google Gemini 与 <strong>ChatGPT（OpenAI）</strong>。API Key 仅保存在本地浏览器中，不上传任何服务器；ChatGPT 订阅与 OpenAI API 用量分开计费。</p>
           <div class="form-row">
             <label>AI 模型提供方</label>
             <div class="glass-select-wrapper">
               <select id="setting-api-provider" onchange="onProviderChange()">
                 <option value="claude">Claude (Anthropic，推荐)</option>
                 <option value="gemini">Gemini (Google)</option>
+                <option value="openai">ChatGPT (OpenAI)</option>
               </select>
             </div>
           </div>
@@ -536,6 +537,6 @@
     <div class="pr-toast" id="pr-toast"></div>
   </div>
 
-  <script src="app.js?v=1.5.0"></script>
+  <script src="app.js?v=1.6.0"></script>
 </body>
 </html>

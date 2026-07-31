@@ -20,7 +20,7 @@
   - 身体部位统计：近 30 天训练分布环形图，每个部位固定绑定专属颜色（配色通过了色盲区分度与对比度校验），中心显示总次数，图例带次数与占比
   - PR 个人最佳纪录：力量项目记录最大重量（连续完成 2 组以上才计入，避免单次爆发力误判），跑步机/动感单车记录最长时长；打卡或完成 AI 推荐刷新纪录时会弹出庆祝提示
 - **日间/夜间模式**：右上角一键切换，偏好保存在本地，下次打开自动记住
-- **AI 健身教练**（默认 **Anthropic Claude**，可切换 Google Gemini；三种模式）：
+- **AI 健身教练**（默认 **Anthropic Claude**，可切换 Google Gemini 或 ChatGPT；三种模式）：
   - **聊天**：自由提问答疑，AI 结合打卡历史回答，支持多轮上下文（真正"接着聊"，不是每次都重新总结）；不会擅自甩出训练菜单
   - **训练菜单**：对话式定制菜单（可以描述目标/时间限制），或一键生成；结构化计划推送到首页「AI 教练推荐」模块，每条推荐可「完成」（自动生成当天打卡记录，力量类支持多重量组、重量强制取整到 5kg）、「调整」（改完强度/组数/组外次数再完成）或「拒绝」；新一轮菜单会替换掉上一轮还没处理的推荐
   - **身体分析**：分析各部位训练量分布与疲劳恢复状况，结构化结果推送到趋势板块的恢复进度模块；采用 temperature 0 + 以 App 算法估算值为锚点 + 数值格式约束三重手段保证同样的数据得到稳定一致的输出
@@ -51,14 +51,15 @@
 
 ## 🤖 AI 教练配置（可选）
 
-应用默认直连 **Anthropic Claude**（推理与结构化输出更强，更适合训练菜单设计与恢复分析），也可在「设置」页切换回 Google Gemini：
+应用默认直连 **Anthropic Claude**（推理与结构化输出更强，更适合训练菜单设计与恢复分析），也可在「设置」页切换 Google Gemini 或 ChatGPT（OpenAI）：
 
 - **Claude（默认，推荐）**：在 [Anthropic 控制台](https://console.anthropic.com/settings/keys) 申请 API Key（`sk-ant-...`），默认模型 Claude Opus 4.8，可选 Sonnet 5 / Haiku 4.5
 - **Gemini**：在 [Google AI Studio](https://aistudio.google.com/apikey) 免费申请 API Key（`AIzaSy...`），可选 Gemini 2.5 Flash / 2.5 Pro
+- **ChatGPT（OpenAI）**：在 [OpenAI Platform](https://platform.openai.com/api-keys) 创建 API Key（`sk-proj-...`）。默认 GPT-5.6 Sol，适合训练菜单与恢复分析；Terra 适合日常聊天的速度/质量平衡；Luna 适合轻量、快速问答。ChatGPT Plus/Pro 订阅与 API 用量分开计费。
 
-打开应用「设置」页选择提供方并粘贴对应 Key，即可在「AI教练」页直接对话。两家的 Key 各自独立保存，切换提供方互不覆盖。
+打开应用「设置」页选择提供方并粘贴对应 Key，即可在「AI教练」页直接对话。三家的 Key 各自独立保存，切换提供方互不覆盖。
 
-> 说明：应用在浏览器端直连 Anthropic API（携带 `anthropic-dangerous-direct-browser-access` 头）。API Key 仅保存在你的浏览器 localStorage 中，不会上传到任何服务器，也不会包含在导出的备份文件里。
+> 说明：应用在浏览器端直连所选 AI 提供方的 API（Claude 会携带 `anthropic-dangerous-direct-browser-access` 头）。API Key 仅保存在你的浏览器 localStorage 中，不会上传到任何服务器，也不会包含在导出的备份文件里。
 
 ## 📁 项目结构
 
