@@ -47,11 +47,12 @@ const AI_PROVIDERS = {
     coachName: 'Gemini 教练',
     keyLabel: 'Gemini API Key',
     keyPlaceholder: 'AIzaSy...',
-    defaultModel: 'gemini-2.5-flash',
+    defaultModel: 'gemini-3.7-flash',
     hint: '在 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> 免费申请 Gemini API Key。',
     models: [
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (速度快)' },
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (推理能力强)' }
+      { id: 'gemini-3.7-flash', name: 'Gemini 3.7 Flash (最新，推荐)' },
+      { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro (推理能力强，预览版)' },
+      { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash-Lite (最省，速度快)' }
     ]
   },
   openai: {
@@ -3299,6 +3300,15 @@ async function requestOpenAI(model, systemPromptText, messages, mode) {
   return text;
 }
 
+// Gemini 3 起官方明确要求 temperature 保持默认值 1.0：调低会引发复读循环、复杂推理退化，
+// 所以只有 2.5 及更早的老模型才显式传 temperature，新模型一律交给默认值。
+function buildGeminiGenerationConfig(model, mode) {
+  const major = parseInt((/^gemini-(\d+)/.exec(model) || [])[1], 10);
+  if (!(major >= 1 && major <= 2)) return {};
+  // 老模型的分析模式用 temperature 0，保证同样的数据得到尽量一致的输出
+  return { temperature: mode === 'analysis' ? 0 : 0.7 };
+}
+
 // 直连 Google Gemini API
 async function requestGemini(model, systemPromptText, messages, mode) {
   const conversationTurns = messages.map(m => ({
@@ -3312,8 +3322,7 @@ async function requestGemini(model, systemPromptText, messages, mode) {
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPromptText }] },
       contents: conversationTurns,
-      // 分析模式用 temperature 0，保证同样的数据得到尽量一致的输出
-      generationConfig: { temperature: mode === 'analysis' ? 0 : 0.7 }
+      generationConfig: buildGeminiGenerationConfig(model, mode)
     })
   });
   const data = await response.json();
