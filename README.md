@@ -23,7 +23,7 @@
 - **AI 健身教练**（默认 **Anthropic Claude**，可切换 Google Gemini 或 ChatGPT；三种模式）：
   - **聊天**：自由提问答疑，AI 结合打卡历史回答，支持多轮上下文（真正"接着聊"，不是每次都重新总结）；不会擅自甩出训练菜单
   - **训练菜单**：对话式定制菜单（可以描述目标/时间限制），或一键生成；结构化计划推送到首页「AI 教练推荐」模块，每条推荐可「完成」（自动生成当天打卡记录，力量类支持多重量组、重量强制取整到 5kg）、「调整」（改完强度/组数/组外次数再完成）或「拒绝」；新一轮菜单会替换掉上一轮还没处理的推荐
-  - **身体分析**：分析各部位训练量分布与疲劳恢复状况，结构化结果推送到趋势板块的恢复进度模块；采用 temperature 0 + 以 App 算法估算值为锚点 + 数值格式约束三重手段保证同样的数据得到稳定一致的输出
+  - **身体分析**：分析各部位训练量分布与疲劳恢复状况，结构化结果推送到趋势板块的恢复进度模块；以 App 算法估算值为锚点 + 数值格式约束保证同样的数据得到稳定一致的输出（Gemini 3 起按官方要求保持默认 temperature，不再调低，避免复读循环与推理退化；2.5 及更早的老模型仍走 temperature 0）
   - AI 的所有建议都被约束在 chocoZAP 实际器材范围内，不会推荐门店里没有的器械
   - 多会话历史记录：可以开新对话、查看/切换/删除历史对话，会话按模式标记，切换会话自动回到对应模式
   - 也可一键打包健身数据为 Prompt，粘贴到任意 AI 网页端使用（免 API Key）
@@ -54,7 +54,7 @@
 应用默认直连 **Anthropic Claude**（推理与结构化输出更强，更适合训练菜单设计与恢复分析），也可在「设置」页切换 Google Gemini 或 ChatGPT（OpenAI）：
 
 - **Claude（默认，推荐）**：在 [Anthropic 控制台](https://console.anthropic.com/settings/keys) 申请 API Key（`sk-ant-...`），默认模型 Claude Opus 4.8，可选 Sonnet 5 / Haiku 4.5
-- **Gemini**：在 [Google AI Studio](https://aistudio.google.com/apikey) 免费申请 API Key（`AIzaSy...`），可选 Gemini 2.5 Flash / 2.5 Pro
+- **Gemini**：在 [Google AI Studio](https://aistudio.google.com/apikey) 免费申请 API Key（`AIzaSy...`），默认模型 Gemini 3.7 Flash（2026-08 最新，编码与 agent 能力显著增强；2026-12-31 前为介绍性定价 $0.75/$3.75 每百万 token，2027-01-01 起恢复 $1.50/$7.50），可选 Gemini 3.1 Pro（预览版，推理最强）/ Gemini 3.1 Flash-Lite（最省）。原来的 Gemini 2.5 Flash / 2.5 Pro 将于 2026-10-16 停用，已从列表中移除
 - **ChatGPT（OpenAI）**：在 [OpenAI Platform](https://platform.openai.com/api-keys) 创建 API Key（`sk-proj-...`）。在组织的数据共享设置中开启「Share inputs and outputs with OpenAI」、确认已加入免费 token 计划，并保持 API 账户正余额后：GPT-5.6 Terra（250万 token/天）适合日常教练；GPT-5.6 Sol（25万 token/天）适合深度训练复盘；GPT-5.6 Luna（250万 token/天）适合轻量、快速问答。符合条件的共享流量会自动使用免费额度，超出每日池子才会按标准价格计费。ChatGPT Plus/Pro 订阅与 API 用量分开计算。
 
 打开应用「设置」页选择提供方并粘贴对应 Key，即可在「AI教练」页直接对话。三家的 Key 各自独立保存，切换提供方互不覆盖。
