@@ -2555,7 +2555,52 @@ function addAiRecommendations(rawItems) {
   renderAiRecommendations();
 }
 
-// 渲染首页"Gemini的推荐"模块；没有待处理推荐时整个模块隐藏，避免占用首页空间
+function recommendationNumber(value, fallback = 0) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function formatRecommendationGroup(group) {
+  const weight = roundToNearestStep(recommendationNumber(group.weight), WEIGHT_STEP_KG);
+  const reps = recommendationNumber(group.reps);
+  const sets = recommendationNumber(group.sets);
+  const extra = recommendationNumber(group.extraReps);
+  return `${weight}kg × ${reps}次 × ${sets}组${extra ? ` + 组外${extra}次` : ''}`;
+}
+
+function formatRecommendationVariableSegment(segment, unit) {
+  return `${recommendationNumber(segment.speed)}${unit} × ${recommendationNumber(segment.duration)}分`;
+}
+
+// 推荐卡直接展示结构化数据，不能让用户只能依赖 AI 的一句备注理解计划。
+function renderRecommendationDetails(rec) {
+  const d = rec.details && typeof rec.details === 'object' ? rec.details : {};
+  if (WEIGHTED_STRENGTH.includes(rec.type)) {
+    const groups = getStrengthGroups(d);
+    if (groups.length) {
+      return `<div class="ai-rec-structure">${groups.map((group, index) => `
+        <div class="ai-rec-structure-row"><b>重量组 ${index + 1}</b><span>${formatRecommendationGroup(group)}</span></div>
+      `).join('')}</div>`;
+    }
+  }
+
+  if ((rec.type === 'treadmill' || rec.type === 'spin_bike') && d.variableSpeed) {
+    const unit = rec.type === 'treadmill' ? 'km/h' : '档';
+    const rows = [];
+    if (d.warmup && recommendationNumber(d.warmup.duration) > 0) rows.push(['热身', formatRecommendationVariableSegment(d.warmup, unit)]);
+    (Array.isArray(d.segments) ? d.segments : []).forEach((segment, index) => rows.push([`变速 ${index + 1}`, formatRecommendationVariableSegment(segment, unit)]));
+    if (d.sprint && recommendationNumber(d.sprint.duration) > 0) rows.push(['冲刺', formatRecommendationVariableSegment(d.sprint, unit)]);
+    const meta = `${recommendationNumber(d.time)}分钟${rec.type === 'treadmill' ? ` · 坡度${recommendationNumber(d.incline)}%` : ''}`;
+    return `<div class="ai-rec-structure">
+      <div class="ai-rec-structure-summary">变速训练 · ${meta}</div>
+      ${rows.map(([label, value]) => `<div class="ai-rec-structure-row"><b>${label}</b><span>${value}</span></div>`).join('')}
+    </div>`;
+  }
+
+  return '';
+}
+
+// 渲染首页 AI 教练推荐模块；没有待处理推荐时整个模块隐藏，避免占用首页空间
 function renderAiRecommendations() {
   const section = document.getElementById("ai-recommendation-section");
   const list = document.getElementById("ai-recommendation-list");
@@ -2580,6 +2625,7 @@ function renderAiRecommendations() {
         <div class="ai-rec-details">
           <span class="ai-rec-title">${escapeHtml(rec.label)}</span>
           ${rec.intensity ? `<span class="ai-rec-intensity">${escapeHtml(rec.intensity)}</span>` : ''}
+          ${renderRecommendationDetails(rec)}
         </div>
       </div>
       <div class="ai-rec-actions">
@@ -2595,50 +2641,63 @@ function renderAiRecommendations() {
 // 7.3 调整 AI 推荐：完成前允许修改强度(重量)/组数/组外次数等参数
 // ==========================================================================
 let adjustingRecId = null;
+let adjustStrengthGroups = [];
+let adjustVariableSegments = [];
 
 // 力量类项目 (含重量) 统一走这一套字段；默认配重只能以 5kg 为单位，
 // 所以这里的步进器只给 ±5，不提供 ±1，从 UI 层面就避免调出不合法的重量
 function buildStrengthAdjustFields(d) {
-  // 兼容多重量组：调整对话框以第一组为基准编辑（落地时按单组处理）
-  const g0 = getStrengthGroups(d)[0] || { weight: WEIGHT_STEP_KG, reps: 12, sets: 3, extraReps: 0 };
-  const weight = roundToNearestStep(g0.weight, WEIGHT_STEP_KG) || WEIGHT_STEP_KG;
-  return `
-    ${(getStrengthGroups(d).length > 1) ? '<p class="settings-desc" style="margin-bottom:8px;">该推荐含多个重量组，这里以首组为准调整；如需保留多组请直接「完成」后在历史里编辑。</p>' : ''}
-    <div class="form-row">
-      <label>重量 (kg) <small>—— 器械以 5kg 为单位调整</small></label>
-      <div class="stepper-input">
-        <button type="button" class="step-btn decrease" onclick="adjustValue('adjust-weight', -${WEIGHT_STEP_KG})">-5</button>
-        <input type="number" id="adjust-weight" value="${weight}" min="0" max="300" step="${WEIGHT_STEP_KG}">
-        <button type="button" class="step-btn increase" onclick="adjustValue('adjust-weight', ${WEIGHT_STEP_KG})">+5</button>
+  adjustStrengthGroups = getStrengthGroups(d).map(group => ({
+    weight: roundToNearestStep(group.weight, WEIGHT_STEP_KG),
+    reps: recommendationNumber(group.reps, 12),
+    sets: recommendationNumber(group.sets, 3),
+    extraReps: recommendationNumber(group.extraReps)
+  }));
+  if (!adjustStrengthGroups.length) adjustStrengthGroups = [{ weight: WEIGHT_STEP_KG, reps: 12, sets: 3, extraReps: 0 }];
+  return `<p class="settings-desc adjust-help">每个重量组都可在完成前独立调整；保存后会原样带入打卡记录。</p>
+    <div id="adjust-strength-groups"></div>
+    <button type="button" class="add-group-btn" onclick="addAdjustStrengthGroup()">＋ 添加重量组</button>`;
+}
+
+function renderAdjustStrengthGroups() {
+  const container = document.getElementById('adjust-strength-groups');
+  if (!container) return;
+  const multi = adjustStrengthGroups.length > 1;
+  container.innerHTML = adjustStrengthGroups.map((group, index) => `
+    <div class="strength-group adjust-strength-group">
+      <div class="sg-head"><span class="sg-title">重量组 ${index + 1}</span>${multi ? `<button type="button" class="sg-remove" onclick="removeAdjustStrengthGroup(${index})">移除</button>` : ''}</div>
+      <div class="form-row"><label>重量 (kg) <small>—— 以 5kg 为单位调整</small></label>
+        <div class="stepper-input"><button type="button" class="step-btn decrease" onclick="adjustValue('adjust-sg-weight-${index}', -${WEIGHT_STEP_KG})">-5</button><input type="number" id="adjust-sg-weight-${index}" value="${roundToNearestStep(group.weight, WEIGHT_STEP_KG)}" min="0" max="300" step="${WEIGHT_STEP_KG}"><button type="button" class="step-btn increase" onclick="adjustValue('adjust-sg-weight-${index}', ${WEIGHT_STEP_KG})">+5</button></div>
       </div>
-    </div>
-    <div class="form-row-grid">
-      <div class="form-row">
-        <label>每组次数</label>
-        <div class="stepper-input">
-          <button type="button" class="step-btn decrease" onclick="adjustValue('adjust-reps', -1)">-</button>
-          <input type="number" id="adjust-reps" value="${g0.reps || 12}" min="1" max="100">
-          <button type="button" class="step-btn increase" onclick="adjustValue('adjust-reps', 1)">+</button>
-        </div>
+      <div class="form-row-grid">
+        <div class="form-row"><label>每组次数</label><div class="stepper-input"><button type="button" class="step-btn decrease" onclick="adjustValue('adjust-sg-reps-${index}', -1)">-</button><input type="number" id="adjust-sg-reps-${index}" value="${recommendationNumber(group.reps, 12)}" min="1" max="100"><button type="button" class="step-btn increase" onclick="adjustValue('adjust-sg-reps-${index}', 1)">+</button></div></div>
+        <div class="form-row"><label>组数</label><div class="stepper-input"><button type="button" class="step-btn decrease" onclick="adjustValue('adjust-sg-sets-${index}', -1)">-</button><input type="number" id="adjust-sg-sets-${index}" value="${recommendationNumber(group.sets, 3)}" min="1" max="20"><button type="button" class="step-btn increase" onclick="adjustValue('adjust-sg-sets-${index}', 1)">+</button></div></div>
       </div>
-      <div class="form-row">
-        <label>组数</label>
-        <div class="stepper-input">
-          <button type="button" class="step-btn decrease" onclick="adjustValue('adjust-sets', -1)">-</button>
-          <input type="number" id="adjust-sets" value="${g0.sets || 3}" min="1" max="20">
-          <button type="button" class="step-btn increase" onclick="adjustValue('adjust-sets', 1)">+</button>
-        </div>
-      </div>
-    </div>
-    <div class="form-row">
-      <label>组外次数 <small>—— 可选，正式组数之外力竭/额外加练的次数</small></label>
-      <div class="stepper-input">
-        <button type="button" class="step-btn decrease" onclick="adjustValue('adjust-extra-reps', -1)">-</button>
-        <input type="number" id="adjust-extra-reps" value="${d.extraReps || ''}" placeholder="0" min="0" max="100">
-        <button type="button" class="step-btn increase" onclick="adjustValue('adjust-extra-reps', 1)">+</button>
-      </div>
-    </div>
-  `;
+      <div class="form-row"><label>组外次数 <small>—— 可选</small></label><div class="stepper-input"><button type="button" class="step-btn decrease" onclick="adjustValue('adjust-sg-extra-${index}', -1)">-</button><input type="number" id="adjust-sg-extra-${index}" value="${recommendationNumber(group.extraReps) || ''}" placeholder="0" min="0" max="100"><button type="button" class="step-btn increase" onclick="adjustValue('adjust-sg-extra-${index}', 1)">+</button></div></div>
+    </div>`).join('');
+}
+
+function readAdjustStrengthGroups() {
+  adjustStrengthGroups = adjustStrengthGroups.map((_, index) => ({
+    weight: roundToNearestStep(document.getElementById(`adjust-sg-weight-${index}`).value, WEIGHT_STEP_KG),
+    reps: parseInt(document.getElementById(`adjust-sg-reps-${index}`).value) || 0,
+    sets: parseInt(document.getElementById(`adjust-sg-sets-${index}`).value) || 0,
+    extraReps: parseInt(document.getElementById(`adjust-sg-extra-${index}`).value) || 0
+  }));
+}
+
+function addAdjustStrengthGroup() {
+  readAdjustStrengthGroups();
+  const last = adjustStrengthGroups[adjustStrengthGroups.length - 1] || { weight: WEIGHT_STEP_KG, reps: 12, sets: 3, extraReps: 0 };
+  adjustStrengthGroups.push({ ...last });
+  renderAdjustStrengthGroups();
+}
+
+function removeAdjustStrengthGroup(index) {
+  readAdjustStrengthGroups();
+  adjustStrengthGroups.splice(index, 1);
+  if (!adjustStrengthGroups.length) adjustStrengthGroups.push({ weight: WEIGHT_STEP_KG, reps: 12, sets: 3, extraReps: 0 });
+  renderAdjustStrengthGroups();
 }
 
 function buildSitupsAdjustFields(d) {
@@ -2670,6 +2729,58 @@ function buildSitupsAdjustFields(d) {
       </div>
     </div>
   `;
+}
+
+function buildVariableCardioAdjustFields(type, d) {
+  const isTreadmill = type === 'treadmill';
+  const unit = isTreadmill ? 'km/h' : '档';
+  const speedStep = isTreadmill ? 0.5 : 1;
+  adjustVariableSegments = Array.isArray(d.segments) && d.segments.length
+    ? d.segments.map(segment => ({ speed: recommendationNumber(segment.speed), duration: recommendationNumber(segment.duration) }))
+    : [{ speed: isTreadmill ? 6 : 8, duration: 5 }];
+  const warmup = d.warmup || {};
+  const sprint = d.sprint || {};
+  return `
+    <p class="settings-desc adjust-help">每个变速段都可独立调整；总时长应等于各段时长之和。</p>
+    ${isTreadmill ? `<div class="form-row"><label>坡度 (%)</label><div class="stepper-input"><button type="button" class="step-btn decrease" onclick="adjustValue('adjust-vs-incline', -1)">-</button><input type="number" id="adjust-vs-incline" value="${recommendationNumber(d.incline)}" min="0" max="15"><button type="button" class="step-btn increase" onclick="adjustValue('adjust-vs-incline', 1)">+</button></div></div>` : ''}
+    <div class="var-sub-title">热身段 <small>（可填 0）</small></div>
+    <div class="var-seg-fields"><div class="form-row"><label>速度 (${unit})</label><input type="number" id="adjust-vs-warmup-speed" value="${recommendationNumber(warmup.speed)}" min="0" max="${isTreadmill ? 20 : 24}" step="${speedStep}"></div><div class="form-row"><label>时长 (分钟)</label><input type="number" id="adjust-vs-warmup-dur" value="${recommendationNumber(warmup.duration)}" min="0" max="180"></div></div>
+    <div class="var-sub-title">变速段</div><div id="adjust-variable-segments"></div><button type="button" class="add-group-btn" onclick="addAdjustVariableSegment('${type}')">＋ 添加变速段</button>
+    <div class="var-sub-title">冲刺段 <small>（可填 0）</small></div>
+    <div class="var-seg-fields"><div class="form-row"><label>速度 (${unit})</label><input type="number" id="adjust-vs-sprint-speed" value="${recommendationNumber(sprint.speed)}" min="0" max="${isTreadmill ? 20 : 24}" step="${speedStep}"></div><div class="form-row"><label>时长 (分钟)</label><input type="number" id="adjust-vs-sprint-dur" value="${recommendationNumber(sprint.duration)}" min="0" max="180"></div></div>
+    <div class="form-row"><label>总时长 (分钟)</label><input type="number" id="adjust-vs-time" value="${recommendationNumber(d.time)}" min="1" max="180"></div>
+  `;
+}
+
+function renderAdjustVariableSegments(type) {
+  const container = document.getElementById('adjust-variable-segments');
+  if (!container) return;
+  const isTreadmill = type === 'treadmill';
+  const unit = isTreadmill ? 'km/h' : '档';
+  const speedStep = isTreadmill ? 0.5 : 1;
+  container.innerHTML = adjustVariableSegments.map((segment, index) => `
+    <div class="var-seg"><div class="var-seg-fields"><div class="form-row"><label>变速 ${index + 1} · 速度 (${unit})</label><input type="number" id="adjust-vs-speed-${index}" value="${recommendationNumber(segment.speed)}" min="0" max="${isTreadmill ? 20 : 24}" step="${speedStep}"></div><div class="form-row"><label>时长 (分钟)</label><input type="number" id="adjust-vs-dur-${index}" value="${recommendationNumber(segment.duration)}" min="1" max="180"></div></div>${adjustVariableSegments.length > 1 ? `<button type="button" class="sg-remove" onclick="removeAdjustVariableSegment('${type}', ${index})">移除</button>` : ''}</div>`).join('');
+}
+
+function readAdjustVariableSegments() {
+  adjustVariableSegments = adjustVariableSegments.map((_, index) => ({
+    speed: parseFloat(document.getElementById(`adjust-vs-speed-${index}`).value) || 0,
+    duration: parseFloat(document.getElementById(`adjust-vs-dur-${index}`).value) || 0
+  }));
+}
+
+function addAdjustVariableSegment(type) {
+  readAdjustVariableSegments();
+  const last = adjustVariableSegments[adjustVariableSegments.length - 1] || { speed: type === 'treadmill' ? 6 : 8, duration: 5 };
+  adjustVariableSegments.push({ ...last });
+  renderAdjustVariableSegments(type);
+}
+
+function removeAdjustVariableSegment(type, index) {
+  readAdjustVariableSegments();
+  adjustVariableSegments.splice(index, 1);
+  if (!adjustVariableSegments.length) adjustVariableSegments.push({ speed: type === 'treadmill' ? 6 : 8, duration: 5 });
+  renderAdjustVariableSegments(type);
 }
 
 function buildSpinBikeAdjustFields(d) {
@@ -2798,12 +2909,15 @@ function openAdjustRecDialog(id) {
   const strengthTypes = ['leg_press', 'shoulder_press', 'chest_press', 'preacher_curl', 'lat_pulldown'];
   if (strengthTypes.includes(rec.type)) {
     fieldsContainer.innerHTML = buildStrengthAdjustFields(d);
+    renderAdjustStrengthGroups();
   } else if (rec.type === 'situps') {
     fieldsContainer.innerHTML = buildSitupsAdjustFields(d);
   } else if (rec.type === 'spin_bike') {
-    fieldsContainer.innerHTML = buildSpinBikeAdjustFields(d);
+    fieldsContainer.innerHTML = d.variableSpeed ? buildVariableCardioAdjustFields(rec.type, d) : buildSpinBikeAdjustFields(d);
+    if (d.variableSpeed) renderAdjustVariableSegments(rec.type);
   } else if (rec.type === 'treadmill') {
-    fieldsContainer.innerHTML = buildTreadmillAdjustFields(d);
+    fieldsContainer.innerHTML = d.variableSpeed ? buildVariableCardioAdjustFields(rec.type, d) : buildTreadmillAdjustFields(d);
+    if (d.variableSpeed) renderAdjustVariableSegments(rec.type);
   } else if (rec.type === 'massage_chair') {
     fieldsContainer.innerHTML = buildMassageChairAdjustFields(d);
   } else {
@@ -2827,12 +2941,14 @@ function saveAdjustedRecommendation() {
   const strengthTypes = ['leg_press', 'shoulder_press', 'chest_press', 'preacher_curl', 'lat_pulldown'];
 
   if (strengthTypes.includes(rec.type)) {
-    const weight = roundToNearestStep(document.getElementById("adjust-weight").value, WEIGHT_STEP_KG);
-    const reps = parseInt(document.getElementById("adjust-reps").value) || 0;
-    const sets = parseInt(document.getElementById("adjust-sets").value) || 0;
-    const extraReps = parseInt(document.getElementById("adjust-extra-reps").value) || 0;
-    rec.details = { weight, reps, sets, extraReps };
-    rec.intensity = `${weight}kg x ${reps}次 x ${sets}组` + (extraReps ? ` + 组外${extraReps}次` : "");
+    readAdjustStrengthGroups();
+    const groups = adjustStrengthGroups.filter(group => group.reps > 0 && group.sets > 0);
+    if (!groups.length) {
+      alert('请至少保留一个有效的重量组（每组次数和组数都必须大于 0）。');
+      return;
+    }
+    rec.details = { groups };
+    rec.intensity = groups.map(formatRecommendationGroup).join(' + ');
   } else if (rec.type === 'situps') {
     const reps = parseInt(document.getElementById("adjust-reps").value) || 0;
     const sets = parseInt(document.getElementById("adjust-sets").value) || 0;
@@ -2840,17 +2956,41 @@ function saveAdjustedRecommendation() {
     rec.details = { reps, sets, extraReps };
     rec.intensity = `${reps}次 x ${sets}组` + (extraReps ? ` + 组外${extraReps}次` : "");
   } else if (rec.type === 'spin_bike') {
-    const resistance = parseInt(document.getElementById("adjust-resistance").value) || 0;
-    const time = parseInt(document.getElementById("adjust-time").value) || 0;
-    rec.details = { resistance, time };
-    rec.intensity = `阻力${resistance}档，骑行${time}分钟`;
+    if (document.getElementById('adjust-variable-segments')) {
+      readAdjustVariableSegments();
+      const warmup = { speed: parseFloat(document.getElementById('adjust-vs-warmup-speed').value) || 0, duration: parseFloat(document.getElementById('adjust-vs-warmup-dur').value) || 0 };
+      const sprint = { speed: parseFloat(document.getElementById('adjust-vs-sprint-speed').value) || 0, duration: parseFloat(document.getElementById('adjust-vs-sprint-dur').value) || 0 };
+      const time = parseFloat(document.getElementById('adjust-vs-time').value) || 0;
+      const partsSum = warmup.duration + adjustVariableSegments.reduce((sum, segment) => sum + segment.duration, 0) + sprint.duration;
+      if (time <= 0 || partsSum <= 0) { alert('请填写有效的变速段与总时长。'); return; }
+      rec.details = { variableSpeed: true, warmup, segments: adjustVariableSegments, sprint, time };
+      rec.intensity = `变速骑行 ${time}分钟：${formatVariableSummary(rec.details, '档')}`;
+    } else {
+      const resistance = parseInt(document.getElementById("adjust-resistance").value) || 0;
+      const time = parseInt(document.getElementById("adjust-time").value) || 0;
+      rec.details = { resistance, time };
+      rec.intensity = `阻力${resistance}档，骑行${time}分钟`;
+    }
   } else if (rec.type === 'treadmill') {
-    const mode = document.querySelector('input[name="adjust-treadmill-mode"]:checked').value;
-    const speed = parseFloat(document.getElementById("adjust-speed").value) || 0;
-    const incline = parseFloat(document.getElementById("adjust-incline").value) || 0;
-    const time = parseInt(document.getElementById("adjust-time").value) || 0;
-    rec.details = { mode, speed, incline, time };
-    rec.intensity = `${mode === 'walk' ? '快走' : '慢跑'} ${time}分钟，速度${speed}km/h，坡度${incline}%`;
+    if (document.getElementById('adjust-variable-segments')) {
+      readAdjustVariableSegments();
+      const incline = parseFloat(document.getElementById('adjust-vs-incline').value) || 0;
+      const warmup = { speed: parseFloat(document.getElementById('adjust-vs-warmup-speed').value) || 0, duration: parseFloat(document.getElementById('adjust-vs-warmup-dur').value) || 0 };
+      const sprint = { speed: parseFloat(document.getElementById('adjust-vs-sprint-speed').value) || 0, duration: parseFloat(document.getElementById('adjust-vs-sprint-dur').value) || 0 };
+      const time = parseFloat(document.getElementById('adjust-vs-time').value) || 0;
+      const partsSum = warmup.duration + adjustVariableSegments.reduce((sum, segment) => sum + segment.duration, 0) + sprint.duration;
+      if (time <= 0 || partsSum <= 0) { alert('请填写有效的变速段与总时长。'); return; }
+      const estimate = computeVariableTreadmill(incline, warmup, adjustVariableSegments, sprint, time);
+      rec.details = { variableSpeed: true, incline, warmup, segments: adjustVariableSegments, sprint, time, distance: estimate.distance, calories: estimate.calories };
+      rec.intensity = `变速跑 ${time}分钟，坡度${incline}%：${formatVariableSummary(rec.details, 'km/h')}`;
+    } else {
+      const mode = document.querySelector('input[name="adjust-treadmill-mode"]:checked').value;
+      const speed = parseFloat(document.getElementById("adjust-speed").value) || 0;
+      const incline = parseFloat(document.getElementById("adjust-incline").value) || 0;
+      const time = parseInt(document.getElementById("adjust-time").value) || 0;
+      rec.details = { mode, speed, incline, time };
+      rec.intensity = `${mode === 'walk' ? '快走' : '慢跑'} ${time}分钟，速度${speed}km/h，坡度${incline}%`;
+    }
   } else if (rec.type === 'massage_chair') {
     const mode = document.getElementById("adjust-massage-mode").value.trim() || '自动舒缓';
     const duration = parseInt(document.getElementById("adjust-duration").value) || 30;
@@ -2895,9 +3035,11 @@ function acceptAiRecommendation(id) {
       details = { groups: groups };
     }
   } else if (type !== 'custom') {
-    // 其他已知类型：校验必填数值字段
-    const requiredFields = WORKOUT_REQUIRED_FIELDS[type];
-    const valid = details && requiredFields.every(f => details[f] !== undefined && details[f] !== null && details[f] !== '');
+    // 变速有氧和普通有氧的字段不同，不能拿普通 speed/resistance schema 把变速计划降级成自定义项目。
+    const isVariableCardio = (type === 'treadmill' || type === 'spin_bike') && details && details.variableSpeed;
+    const valid = isVariableCardio
+      ? recommendationNumber(details.time) > 0 && Array.isArray(details.segments) && details.segments.some(segment => recommendationNumber(segment.duration) > 0)
+      : details && WORKOUT_REQUIRED_FIELDS[type].every(f => details[f] !== undefined && details[f] !== null && details[f] !== '');
     if (!valid) type = 'custom';
   }
 
@@ -2909,7 +3051,9 @@ function acceptAiRecommendation(id) {
     };
   } else if (type === 'treadmill') {
     // 距离/卡路里统一由 App 按同一套公式计算，不采信 AI 自行估算的数值，保证口径一致
-    const est = computeTreadmillEstimate(details.mode, details.speed, details.incline, details.time);
+    const est = details.variableSpeed
+      ? computeVariableTreadmill(details.incline, details.warmup || {}, details.segments || [], details.sprint || {}, details.time)
+      : computeTreadmillEstimate(details.mode, details.speed, details.incline, details.time);
     details.distance = est.distance;
     details.calories = est.calories;
   }
