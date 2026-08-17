@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="ChocoZAP">
-  <title>ChocoZAP 智能健身助手</title>
+  <meta name="apple-mobile-web-app-title" content="GymNote">
+  <title>GymNote 智能健身助手</title>
   <!-- 主题在样式表加载前就绪，避免日间/夜间切换时出现"先深后浅"的闪烁 -->
   <script>
     (function () {
-      var saved = localStorage.getItem("chocozap_theme") || "dark";
+      var saved = localStorage.getItem("gymnote_theme") || localStorage.getItem("chocozap_theme") || "dark";
       document.documentElement.setAttribute("data-theme", saved);
     })();
   </script>
@@ -33,8 +33,8 @@
     <!-- 顶部状态栏 -->
     <header class="app-header">
       <div class="header-logo">
-        <span class="logo-accent">Choco</span><span class="logo-main">ZAP</span>
-        <span class="logo-badge">Pro</span>
+        <span class="logo-accent">Gym</span><span class="logo-main">Note</span>
+        <span class="logo-badge">个人版</span>
       </div>
       <div class="header-right">
         <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="切换日间/夜间模式">🌙</button>

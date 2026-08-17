@@ -1,4 +1,4 @@
-/* ChocoZAP Pro Style - iOS 27 Liquid Glass Theme */
+/* GymNote Pro Style - iOS 27 Liquid Glass Theme */
 
 :root {
   --bg-color: #07080d;
@@ -9,8 +9,8 @@
   --text-muted: rgba(var(--surface-rgb), 0.35);
 
   /* 品牌与霓虹发光色 */
-  --chocozap-yellow: #ffd000;
-  --chocozap-orange: #ff7300;
+  --brand-yellow: #ffd000;
+  --brand-orange: #ff7300;
   --neon-blue: #00f0ff;
   --neon-green: #39ff14;
   --neon-purple: #ab47bc;
@@ -234,7 +234,7 @@ body {
 }
 
 .logo-accent {
-  color: var(--chocozap-yellow);
+  color: var(--brand-yellow);
   text-shadow: 0 0 12px rgba(255, 208, 0, 0.4);
 }
 
@@ -390,7 +390,7 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--chocozap-yellow), var(--chocozap-orange));
+  background: linear-gradient(135deg, var(--brand-yellow), var(--brand-orange));
   color: #07080d;
 }
 
@@ -486,7 +486,7 @@ body {
 }
 
 .streak-icon {
-  color: var(--chocozap-orange);
+  color: var(--brand-orange);
   background: rgba(255, 115, 0, 0.15);
   box-shadow: 0 0 15px rgba(255, 115, 0, 0.1);
 }
@@ -629,7 +629,7 @@ body {
 }
 
 .trend-bar-strength {
-  background: linear-gradient(90deg, var(--chocozap-yellow), var(--chocozap-orange));
+  background: linear-gradient(90deg, var(--brand-yellow), var(--brand-orange));
 }
 
 .trend-bar-cardio {
@@ -666,7 +666,7 @@ body {
 }
 
 .trend-dot-strength {
-  background: linear-gradient(90deg, var(--chocozap-yellow), var(--chocozap-orange));
+  background: linear-gradient(90deg, var(--brand-yellow), var(--brand-orange));
 }
 
 .trend-dot-cardio {
@@ -738,7 +738,7 @@ body {
 }
 
 .trend-mini-bar-fill.trend-mini-bar-current {
-  background: linear-gradient(180deg, var(--chocozap-yellow), var(--chocozap-orange));
+  background: linear-gradient(180deg, var(--brand-yellow), var(--brand-orange));
 }
 
 .trend-mini-bar-label {
@@ -1291,7 +1291,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
 }
 
 .text-glowing {
-  color: var(--chocozap-yellow);
+  color: var(--brand-yellow);
   text-shadow: 0 0 10px rgba(255, 208, 0, 0.4);
 }
 
@@ -1301,7 +1301,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
   padding: 16px;
   font-size: 16px;
   border-radius: 18px;
-  background: linear-gradient(135deg, var(--chocozap-yellow), var(--chocozap-orange));
+  background: linear-gradient(135deg, var(--brand-yellow), var(--brand-orange));
   color: #07080d;
   margin-top: 10px;
 }
@@ -1320,7 +1320,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
 .hint-pulse {
   width: 16px;
   height: 16px;
-  background: var(--chocozap-yellow);
+  background: var(--brand-yellow);
   border-radius: 50%;
   margin-bottom: 20px;
   position: relative;
@@ -1332,7 +1332,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: var(--chocozap-yellow);
+  background: var(--brand-yellow);
   top: 0;
   left: 0;
   animation: pulse-ring 2s infinite;
@@ -1665,7 +1665,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
 }
 
 .user-bubble .bubble-sender {
-  color: var(--chocozap-yellow);
+  color: var(--brand-yellow);
 }
 
 .user-bubble .bubble-time {
@@ -1854,7 +1854,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
 }
 
 .nav-item.active {
-  color: var(--chocozap-yellow);
+  color: var(--brand-yellow);
   transform: translateY(-2px);
 }
 
@@ -1939,7 +1939,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
     gap: 2px;
   }
   .nav-logo .logo-accent {
-    color: var(--chocozap-yellow);
+    color: var(--brand-yellow);
     text-shadow: 0 0 12px rgba(255, 208, 0, 0.4);
   }
   .nav-logo .logo-main {
@@ -1965,7 +1965,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
   }
   .nav-item.active {
     background: rgba(var(--surface-rgb), 0.06);
-    color: var(--chocozap-yellow);
+    color: var(--brand-yellow);
     transform: none;
   }
   .nav-icon {
@@ -2202,7 +2202,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
 }
 
 .heatmap-cell.level-4 {
-  background: linear-gradient(135deg, var(--chocozap-yellow), var(--chocozap-orange));
+  background: linear-gradient(135deg, var(--brand-yellow), var(--brand-orange));
   box-shadow: 0 0 6px rgba(255, 208, 0, 0.4);
 }
 
@@ -2445,7 +2445,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
 }
 
 .recovery-bar-fill.recovery-mid {
-  background: linear-gradient(90deg, var(--chocozap-yellow), var(--chocozap-orange));
+  background: linear-gradient(90deg, var(--brand-yellow), var(--brand-orange));
 }
 
 .recovery-bar-fill.recovery-low {
@@ -2513,7 +2513,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
   font-family: var(--font-display);
   font-size: 18px;
   font-weight: 800;
-  color: var(--chocozap-yellow);
+  color: var(--brand-yellow);
   text-shadow: 0 0 10px rgba(255, 208, 0, 0.3);
 }
 
@@ -2526,7 +2526,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
   max-width: calc(100% - 48px);
   padding: 14px 22px;
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--chocozap-yellow), var(--chocozap-orange));
+  background: linear-gradient(135deg, var(--brand-yellow), var(--brand-orange));
   color: #07080d;
   font-size: 14px;
   font-weight: 700;
@@ -2692,7 +2692,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
 .sg-title {
   font-size: 12px;
   font-weight: 700;
-  color: var(--chocozap-yellow);
+  color: var(--brand-yellow);
   letter-spacing: 0.5px;
 }
 .sg-remove {
@@ -2725,7 +2725,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
 .add-group-btn:hover {
   background: var(--glass-bg-hover);
   color: var(--text-color);
-  border-color: var(--chocozap-yellow);
+  border-color: var(--brand-yellow);
 }
 
 /* 变速模式 */
@@ -2744,7 +2744,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
 .var-toggle input {
   width: 18px;
   height: 18px;
-  accent-color: var(--chocozap-orange);
+  accent-color: var(--brand-orange);
 }
 .var-sub-title {
   font-size: 12px;
@@ -2809,7 +2809,7 @@ input[type="date"].glass-input::-webkit-calendar-picker-indicator {
   font-size: 10px;
   font-weight: 600;
 }
-.bm-delta.bm-up { color: var(--chocozap-orange); }
+.bm-delta.bm-up { color: var(--brand-orange); }
 .bm-delta.bm-down { color: var(--neon-green); }
 
 .bm-list {

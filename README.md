@@ -1,6 +1,8 @@
-# ChocoZAP Tracker 🍫⚡
+# GymNote
 
-一个专为 chocoZAP 便利健身房设计的健身打卡网页应用。纯前端实现（HTML/CSS/JS），无需后端，可直接部署在 GitHub Pages 上，数据保存在浏览器本地，并可选配 GitHub Gist 云同步实现多设备互通。
+你的个人训练记录。一个纯前端健身打卡网页应用（HTML/CSS/JS），可直接部署在 GitHub Pages；数据默认保存在浏览器本地，并可选配 GitHub Gist 云同步。
+
+> GymNote 是独立的个人项目，不隶属、也不代表任何健身房、AI 服务商或其关联公司。
 
 ## ✨ 功能特性
 
@@ -24,7 +26,7 @@
   - **聊天**：自由提问答疑，AI 结合打卡历史回答，支持多轮上下文（真正"接着聊"，不是每次都重新总结）；不会擅自甩出训练菜单
   - **训练菜单**：对话式定制菜单（可以描述目标/时间限制），或一键生成；结构化计划推送到首页「AI 教练推荐」模块，每条推荐可「完成」（自动生成当天打卡记录，力量类支持多重量组、重量强制取整到 5kg）、「调整」（改完强度/组数/组外次数再完成）或「拒绝」；新一轮菜单会替换掉上一轮还没处理的推荐
   - **身体分析**：分析各部位训练量分布与疲劳恢复状况，结构化结果推送到趋势板块的恢复进度模块；以 App 算法估算值为锚点 + 数值格式约束保证同样的数据得到稳定一致的输出（Gemini 3 起按官方要求保持默认 temperature，不再调低，避免复读循环与推理退化；2.5 及更早的老模型仍走 temperature 0）
-  - AI 的所有建议都被约束在 chocoZAP 实际器材范围内，不会推荐门店里没有的器械
+  - AI 建议会受内置器械清单约束，避免推荐当前配置中没有的器械
   - 多会话历史记录：可以开新对话、查看/切换/删除历史对话，会话按模式标记，切换会话自动回到对应模式
   - 也可一键打包健身数据为 Prompt，粘贴到任意 AI 网页端使用（免 API Key）
 - **GitHub Gist 云同步**：用你自己的 GitHub 账号作为免费私有云存储，打卡记录和「Gemini的推荐」列表会自动合并同步到所有设备，删除/完成/拒绝也会正确同步（墓碑机制，不会被另一台设备"复活"）；AI 聊天记录只保存在本地、不参与云同步（避免 Gist 文件随聊天记录无限增长）
@@ -36,7 +38,7 @@
 
 1. Fork 或克隆本仓库
 2. 仓库 Settings → Pages → 选择部署分支（如 `main`）
-3. 访问 `https://<你的用户名>.github.io/chocozap-tracker/`
+3. 仓库改名为 `gymnote` 后，访问 `https://<你的用户名>.github.io/gymnote/`
 
 也可以直接双击 `index.html` 在本地浏览器打开使用。
 
@@ -59,12 +61,12 @@
 
 打开应用「设置」页选择提供方并粘贴对应 Key，即可在「AI教练」页直接对话。三家的 Key 各自独立保存，切换提供方互不覆盖。
 
-> 说明：应用在浏览器端直连所选 AI 提供方的 API（Claude 会携带 `anthropic-dangerous-direct-browser-access` 头）。API Key 仅保存在你的浏览器 localStorage 中，不会上传到任何服务器，也不会包含在导出的备份文件里。
+> 安全提示：应用在浏览器端直连所选 AI 提供方的 API（Claude 会携带 `anthropic-dangerous-direct-browser-access` 头）。API Key 与 Gist Token 仅保存在当前浏览器，且不会包含在导出的备份文件里；请勿在不可信设备或浏览器扩展环境中保存密钥。
 
 ## 📁 项目结构
 
 ```
-├── index.html   # 页面结构（五个页签：主页 / 打卡 / 历史 / AI教练 / 设置）
+├── index.html   # 页面结构（主页 / 打卡 / 历史 / AI教练 / 趋势 / 设置）
 ├── style.css    # 深色玻璃拟态风格样式
 ├── app.js       # 全部应用逻辑（本地存储、统计、云同步、AI 对接）
 └── README.md
@@ -72,7 +74,7 @@
 
 ## 📝 数据格式
 
-- 本地存储：`localStorage` 的 `chocozap_workouts`（打卡记录）、`chocozap_measurements`（身体数据：体重/臂围/腰围/胸围）、`chocozap_deleted`（删除墓碑）、`chocozap_settings`（配置，含 AI 提供方与各提供方 Key）、`chocozap_theme`（日间/夜间主题）、`chocozap_chat_sessions`（AI 多会话聊天记录，带模式标记）、`chocozap_ai_recommendations`（AI 训练推荐列表）、`chocozap_recovery_ai`（AI 身体分析推送的恢复数据，仅本地）
+- 本地存储：使用 `gymnote_*` 键保存打卡、体测、设置、对话与推荐。首次运行会自动复制旧版 `chocozap_*` 键，确保改名升级不丢数据。
 - 力量记录采用多重量组结构 `details.groups: [{ weight, reps, sets, extraReps }]`（兼容读取旧版扁平 `weight/reps/sets`）；有氧变速记录为 `details.variableSpeed / warmup / segments / sprint / time`；身体数据与设置里的 AI Key 仅本地保存，不参与 Gist 云同步
-- 云端 Gist 文件 `chocozap_workouts.json`：`{ "workouts": [...], "recommendations": [...], "deleted": {...} }`（兼容读取旧版纯数组格式与更早的无 recommendations 字段格式）
+- 云端 Gist 文件 `gymnote-data.json`：`{ "workouts": [...], "recommendations": [...], "deleted": {...} }`；升级时仍会读取旧版 `chocozap_workouts.json`，下次同步会写入新文件名。
 - 所有日期均按**用户本地时区**记录为 `YYYY-MM-DD`

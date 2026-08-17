@@ -1,4 +1,40 @@
-// ChocoZAP Pro - Local Workout Tracker Logic
+// GymNote - Local Workout Tracker Logic
+
+const GIST_FILE_NAME = "gymnote-data.json";
+const LEGACY_GIST_FILE_NAME = "chocozap_workouts.json";
+const LEGACY_STORAGE_KEYS = [
+  "theme", "has_run_before", "workouts", "settings", "deleted",
+  "ai_recommendations", "measurements", "chat_sessions",
+  "active_chat_session", "recovery_ai"
+];
+
+// The GitHub Pages path can change during a rename, but localStorage is scoped to
+// the user's github.io origin. Copy once rather than deleting the old values so a
+// user can still roll back to an older deployed page without losing their data.
+function migrateLegacyStorage() {
+  LEGACY_STORAGE_KEYS.forEach(key => {
+    const target = `gymnote_${key}`;
+    const legacy = `chocozap_${key}`;
+    if (localStorage.getItem(target) === null && localStorage.getItem(legacy) !== null) {
+      localStorage.setItem(target, localStorage.getItem(legacy));
+    }
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// JSON.stringify keeps the JavaScript string valid; escaping additionally keeps
+// it contained when inserted into an HTML attribute for legacy inline handlers.
+function inlineString(value) {
+  return escapeHtml(JSON.stringify(String(value ?? "")));
+}
 
 // ==========================================================================
 // 1. 初始化状态与本地存储 (Data Initialization)
@@ -78,7 +114,7 @@ function getAiCoachName() {
   return AI_PROVIDERS[getAiProvider()].coachName;
 }
 
-// ChocoZAP 门店实际可用的器材清单，用于约束 AI 只推荐这些器材范围内的动作
+// 用户配置的器械清单，用于约束 AI 只推荐这些器材范围内的动作
 const EQUIPMENT_ROSTER = [
   { type: "leg_press", label: "腿举 (Leg Press)", note: "力量训练，练下肢" },
   { type: "shoulder_press", label: "肩推 (Shoulder Press)", note: "力量训练，练肩部" },
@@ -91,7 +127,7 @@ const EQUIPMENT_ROSTER = [
   { type: "massage_chair", label: "按摩椅 (Massage Chair)", note: "拉伸放松，非力量/有氧训练" }
 ];
 
-// ChocoZAP 力量器械配重片的最小调整单位 (kg)，不支持 2.5kg 这种半档
+// 默认力量器械配重片的最小调整单位 (kg)，不支持 2.5kg 这种半档
 const WEIGHT_STEP_KG = 5;
 
 // 把重量取整到最近的 step 的整数倍 (用于兜底 AI 给出不合法的重量数值，如 2.5kg 的半档)
@@ -182,6 +218,7 @@ const initialMockWorkouts = [
 
 // 初始化加载
 document.addEventListener("DOMContentLoaded", () => {
+  migrateLegacyStorage();
   refreshHeaderDate();
   syncThemeToggleIcon();
 
@@ -220,7 +257,7 @@ function toggleTheme() {
   const current = document.documentElement.getAttribute("data-theme") || "dark";
   const next = current === "light" ? "dark" : "light";
   document.documentElement.setAttribute("data-theme", next);
-  localStorage.setItem("chocozap_theme", next);
+  localStorage.setItem("gymnote_theme", next);
   syncThemeToggleIcon();
   // 主题切换后折线图颜色跟随 CSS 变量重绘一次即可，坐标本身不受影响
 }
@@ -234,38 +271,38 @@ function syncThemeToggleIcon() {
 
 // 从 LocalStorage 加载数据
 function loadData() {
-  const hasRunBefore = localStorage.getItem("chocozap_has_run_before");
-  const storedWorkouts = localStorage.getItem("chocozap_workouts");
-  const storedSettings = localStorage.getItem("chocozap_settings");
+  const hasRunBefore = localStorage.getItem("gymnote_has_run_before");
+  const storedWorkouts = localStorage.getItem("gymnote_workouts");
+  const storedSettings = localStorage.getItem("gymnote_settings");
 
   // 加载已删除记录的墓碑表
   try {
-    state.deletedIds = JSON.parse(localStorage.getItem("chocozap_deleted") || "{}") || {};
+    state.deletedIds = JSON.parse(localStorage.getItem("gymnote_deleted") || "{}") || {};
   } catch (e) {
     state.deletedIds = {};
   }
 
   // 加载 AI 训练推荐列表
   try {
-    state.aiRecommendations = JSON.parse(localStorage.getItem("chocozap_ai_recommendations") || "[]") || [];
+    state.aiRecommendations = JSON.parse(localStorage.getItem("gymnote_ai_recommendations") || "[]") || [];
   } catch (e) {
     state.aiRecommendations = [];
   }
 
   // 加载身体数据记录（体重/臂围/腰围/胸围）
   try {
-    state.measurements = JSON.parse(localStorage.getItem("chocozap_measurements") || "[]") || [];
+    state.measurements = JSON.parse(localStorage.getItem("gymnote_measurements") || "[]") || [];
   } catch (e) {
     state.measurements = [];
   }
 
   // 加载 AI 多会话聊天记录
   try {
-    state.chatSessions = JSON.parse(localStorage.getItem("chocozap_chat_sessions") || "[]") || [];
+    state.chatSessions = JSON.parse(localStorage.getItem("gymnote_chat_sessions") || "[]") || [];
   } catch (e) {
     state.chatSessions = [];
   }
-  state.activeChatSessionId = localStorage.getItem("chocozap_active_chat_session") || null;
+  state.activeChatSessionId = localStorage.getItem("gymnote_active_chat_session") || null;
   if (!state.chatSessions.some(s => s.id === state.activeChatSessionId)) {
     state.activeChatSessionId = state.chatSessions.length > 0 ? state.chatSessions[0].id : null;
   }
@@ -282,9 +319,9 @@ function loadData() {
       githubToken: '',
       githubGistId: ''
     };
-    localStorage.setItem("chocozap_workouts", JSON.stringify(state.workouts));
-    localStorage.setItem("chocozap_settings", JSON.stringify(state.settings));
-    localStorage.setItem("chocozap_has_run_before", "true");
+    localStorage.setItem("gymnote_workouts", JSON.stringify(state.workouts));
+    localStorage.setItem("gymnote_settings", JSON.stringify(state.settings));
+    localStorage.setItem("gymnote_has_run_before", "true");
   } else {
     // 非首次打开：直接读取已存储的数据 (如果 workouts 被删除了则默认空数组，防止重置后重新加载 mock)
     state.workouts = storedWorkouts ? JSON.parse(storedWorkouts) : [];
@@ -301,7 +338,7 @@ function loadData() {
         githubToken: '',
         githubGistId: ''
       };
-      localStorage.setItem("chocozap_settings", JSON.stringify(state.settings));
+      localStorage.setItem("gymnote_settings", JSON.stringify(state.settings));
     }
   }
 
@@ -1233,7 +1270,7 @@ function saveWorkout(event) {
     const idx = state.workouts.findIndex(w => w.id === editId);
     if (idx !== -1) {
       state.workouts[idx] = Object.assign({}, state.workouts[idx], { date: workoutDate, type: type, details: details, notes: notes });
-      localStorage.setItem("chocozap_workouts", JSON.stringify(state.workouts));
+      localStorage.setItem("gymnote_workouts", JSON.stringify(state.workouts));
       checkAndCelebratePR(state.workouts[idx]);
     }
   } else {
@@ -1246,7 +1283,7 @@ function saveWorkout(event) {
       notes: notes
     };
     state.workouts.unshift(newWorkout);
-    localStorage.setItem("chocozap_workouts", JSON.stringify(state.workouts));
+    localStorage.setItem("gymnote_workouts", JSON.stringify(state.workouts));
     checkAndCelebratePR(newWorkout);
   }
 
@@ -1286,7 +1323,7 @@ function onWorkoutSaved(text, isEdit) {
   }, 900);
 }
 
-// 保存身体数据（体重/臂围/腰围/胸围）——独立存储 chocozap_measurements
+// 保存身体数据（体重/臂围/腰围/胸围）——独立存储 gymnote_measurements
 function saveBodyMetrics(date, editId) {
   const num = id => {
     const v = document.getElementById(id).value;
@@ -1313,12 +1350,12 @@ function saveBodyMetrics(date, editId) {
   }
   // 按日期从新到旧排序，方便"最近一次"读取
   state.measurements.sort((a, b) => new Date(b.date) - new Date(a.date));
-  localStorage.setItem("chocozap_measurements", JSON.stringify(state.measurements));
+  localStorage.setItem("gymnote_measurements", JSON.stringify(state.measurements));
 
   // 同步更新设置里的体重（用于跑步机热量估算）
   if (weight != null) {
     state.settings.weight = weight;
-    localStorage.setItem("chocozap_settings", JSON.stringify(state.settings));
+    localStorage.setItem("gymnote_settings", JSON.stringify(state.settings));
     syncSettingsUI();
   }
 
@@ -1337,7 +1374,7 @@ function editMeasurement(id) {
 function deleteMeasurement(id) {
   if (!confirm("确定删除这条身体数据吗？")) return;
   state.measurements = state.measurements.filter(m => m.id !== id);
-  localStorage.setItem("chocozap_measurements", JSON.stringify(state.measurements));
+  localStorage.setItem("gymnote_measurements", JSON.stringify(state.measurements));
   renderBodyMetrics();
 }
 
@@ -1347,8 +1384,8 @@ function deleteWorkout(id) {
     state.workouts = state.workouts.filter(w => w.id !== id);
     // 写入墓碑：云同步合并时据此排除该记录，防止删除后被云端数据"复活"
     state.deletedIds[id] = Date.now();
-    localStorage.setItem("chocozap_workouts", JSON.stringify(state.workouts));
-    localStorage.setItem("chocozap_deleted", JSON.stringify(state.deletedIds));
+    localStorage.setItem("gymnote_workouts", JSON.stringify(state.workouts));
+    localStorage.setItem("gymnote_deleted", JSON.stringify(state.deletedIds));
     renderHistory();
     updateStats();
     
@@ -1922,7 +1959,7 @@ function renderRecoveryStatus() {
   // AI 身体分析推送的数据 (若有)，按部位覆盖算法值并附点评
   let aiData = null;
   try {
-    aiData = JSON.parse(localStorage.getItem("chocozap_recovery_ai") || "null");
+    aiData = JSON.parse(localStorage.getItem("gymnote_recovery_ai") || "null");
   } catch (e) { aiData = null; }
   const aiParts = {};
   if (aiData && Array.isArray(aiData.parts)) {
@@ -1948,7 +1985,7 @@ function renderRecoveryStatus() {
   if (aiSummaryBox) {
     if (hasAi && aiData.summary) {
       aiSummaryBox.style.display = "block";
-      aiSummaryBox.innerHTML = `<span class="recovery-summary-icon">🩺</span>${aiData.summary}
+      aiSummaryBox.innerHTML = `<span class="recovery-summary-icon">🩺</span>${escapeHtml(aiData.summary)}
         <button class="recovery-clear-ai" onclick="clearAiRecoveryAnalysis()" title="清除AI分析，恢复算法估算">✕</button>`;
     } else {
       aiSummaryBox.style.display = "none";
@@ -1969,7 +2006,7 @@ function renderRecoveryStatus() {
         <div class="recovery-bar-track">
           <div class="recovery-bar-fill ${status.cls}" style="width:${pct}%"></div>
         </div>
-        ${ai && ai.comment ? `<div class="recovery-comment">${ai.comment}</div>` : ''}
+        ${ai && ai.comment ? `<div class="recovery-comment">${escapeHtml(ai.comment)}</div>` : ''}
       </div>
     `;
   }).join('');
@@ -1977,7 +2014,7 @@ function renderRecoveryStatus() {
 
 // 清除 AI 分析结果，恢复到纯算法估算
 function clearAiRecoveryAnalysis() {
-  localStorage.removeItem("chocozap_recovery_ai");
+  localStorage.removeItem("gymnote_recovery_ai");
   renderRecoveryStatus();
 }
 
@@ -2261,16 +2298,16 @@ function renderHistory() {
           <div class="history-item-left">
             <div class="history-item-avatar">${icon}</div>
             <div class="history-item-details">
-              <span class="history-item-title">${title}</span>
-              <span class="history-item-stats">${stats}</span>
-              ${item.notes ? `<span class="history-item-note">💬 ${item.notes}</span>` : ''}
+              <span class="history-item-title">${escapeHtml(title)}</span>
+              <span class="history-item-stats">${escapeHtml(stats)}</span>
+              ${item.notes ? `<span class="history-item-note">💬 ${escapeHtml(item.notes)}</span>` : ''}
             </div>
           </div>
           <div class="history-item-right">
-            <button class="edit-btn" onclick="editWorkout('${item.id}')" title="编辑记录">
+            <button class="edit-btn" onclick="editWorkout(${inlineString(item.id)})" title="编辑记录">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
-            <button class="delete-btn" onclick="deleteWorkout('${item.id}')" title="删除记录">
+            <button class="delete-btn" onclick="deleteWorkout(${inlineString(item.id)})" title="删除记录">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -2322,14 +2359,14 @@ function generateWorkoutSummaryPrompt({ focusToday = false } = {}) {
 
   const equipmentListStr = EQUIPMENT_ROSTER.map(e => `- ${e.label}：${e.note}`).join("\n");
 
-  let prompt = `你是一位专业且充满亲和力的 ChocoZAP 健身私人教练。请为我分析我最近的运动成果并提供针对性建议。
+  let prompt = `你是一位专业且充满亲和力的个人健身教练。请为我分析最近的运动成果并提供针对性建议。
 
-【重要限制：ChocoZAP 门店实际可用的器材清单】
+【重要限制：当前可用器械清单】
 ${equipmentListStr}
 
-请严格注意：你所有的训练建议、动作推荐，必须只从上面这份器材清单里选择。ChocoZAP 是一家小型 24 小时便利健身房，没有杠铃深蹲架、龙门架、壶铃、单杠等常见大型健身房器械，所以请不要提及或推荐清单之外的动作和器材。如果某个训练目标（比如练背、练腿弯举）在清单里没有直接对应的器材，请从清单中挑选功能最相近的替代动作，并说明这是替代方案。
+请严格注意：你所有的训练建议、动作推荐，必须只从上面这份器材清单里选择。不要提及或推荐清单之外的动作和器材；如某个目标在清单里没有直接对应的器材，请从清单中挑选功能最相近的替代动作，并说明这是替代方案。
 
-另外请注意：ChocoZAP 的力量训练器械（腿举、肩推、胸推、牧师椅、高位下拉）配重片只能以 5kg 为最小单位调整，不支持 2.5kg 这种半档，所以你给出的所有重量建议必须是 5 的整数倍（如 20kg、25kg、30kg），不要出现 2.5kg 的倍数。
+另外请注意：力量训练器械的配重以 5kg 为最小单位调整，不支持 2.5kg 这种半档，所以给出的所有重量建议必须是 5 的整数倍（如 20kg、25kg、30kg），不要出现 2.5kg 的倍数。
 
 重要：本 App 的力量打卡支持"同一天同项目多重量组"，一条记录可以包含多个不同重量的组（例如高位下拉 25kg×12×3 组，再加 30kg×8×2 组）。请在给出训练菜单时，充分利用这种多重量组结构（比如金字塔递增/递减、递减组）。有氧（跑步机/单车）支持"变速"模式，可分为热身段、若干变速段（不同速度各自间隔时长）、冲刺段，请在需要时给出分段配速建议。
 
@@ -2343,7 +2380,7 @@ ${focusToday ? `仅限今天（${getLocalDateString()}）的训练记录。不�
 `;
 
   if (recentWorkouts.length === 0) {
-    prompt += "（尚无记录。我刚刚开始在 ChocoZAP 健身，请指导我如何入门并分配力量与有氧运动）\n";
+    prompt += "（尚无记录。我刚刚开始健身，请指导我如何入门并分配力量与有氧运动）\n";
   } else {
     recentWorkouts.forEach((w, index) => {
       const typeStr = {
@@ -2401,7 +2438,7 @@ ${focusToday ? `仅限今天（${getLocalDateString()}）的训练记录。不�
 function buildStructuredPlanInstruction() {
   return `
 【结构化训练计划输出格式 —— 本次请求就是在向你要一份具体可执行的训练菜单，必须输出】
-请在你正常的、给人看的回复内容结束之后，另起一行，追加一个由 <!--CHOCOZAP_PLAN_START--> 和 <!--CHOCOZAP_PLAN_END--> 包裹的 JSON 数组，
+请在你正常的、给人看的回复内容结束之后，另起一行，追加一个由 <!--GYMNOTE_PLAN_START--> 和 <!--GYMNOTE_PLAN_END--> 包裹的 JSON 数组，
 数组每一项代表一个推荐动作，格式为：
 { "type": "器材英文标识", "label": "中文名称", "intensity": "给人看的强度描述文字", "details": { ...结构化数值字段 } }
 type 必须是以下英文标识之一，details 字段必须严格匹配对应 schema：
@@ -2418,7 +2455,7 @@ type 必须是以下英文标识之一，details 字段必须严格匹配对应 
 
 // 从 AI 回复文本中提取结构化训练计划 JSON 块，返回清理后的正文 + 计划数组
 function extractAiPlanFromReply(text) {
-  const match = text.match(/<!--CHOCOZAP_PLAN_START-->([\s\S]*?)<!--CHOCOZAP_PLAN_END-->/);
+  const match = text.match(/<!--GYMNOTE_PLAN_START-->([\s\S]*?)<!--GYMNOTE_PLAN_END-->/);
   if (!match) return { cleanedText: text, items: [] };
 
   const cleanedText = (text.slice(0, match.index) + text.slice(match.index + match[0].length)).trim();
@@ -2449,7 +2486,7 @@ ${algoStr}
 对个别部位做 ±15% 以内的修正，其余部位直接沿用估算值。所有恢复度数值必须是 5 的整数倍。
 非常重要：你的输出必须是确定性的——同样的输入数据必须给出完全相同的数值和点评，不要引入任何随机变化。
 
-请在你正常的、给人看的回复内容结束之后，另起一行，追加一个由 <!--CHOCOZAP_RECOVERY_START--> 和 <!--CHOCOZAP_RECOVERY_END--> 包裹的 JSON 对象，格式为：
+请在你正常的、给人看的回复内容结束之后，另起一行，追加一个由 <!--GYMNOTE_RECOVERY_START--> 和 <!--GYMNOTE_RECOVERY_END--> 包裹的 JSON 对象，格式为：
 { "summary": "不超过50字的总体训练建议", "parts": [ { "part": "部位名", "recovery": 数值0-100, "comment": "不超过30字的该部位点评" }, ... ] }
 part 必须是以下名称之一（每个部位最多出现一次）：${partsListStr}
 这段 JSON 是给 App 自动解析用的，不要用 Markdown 代码块包裹，直接是纯 JSON 文本，且这次务必要输出。`;
@@ -2457,7 +2494,7 @@ part 必须是以下名称之一（每个部位最多出现一次）：${partsLi
 
 // 从 AI 回复文本中提取结构化恢复分析块，返回清理后的正文 + 校验过的恢复数据 (无效时为 null)
 function extractAiRecoveryFromReply(text) {
-  const match = text.match(/<!--CHOCOZAP_RECOVERY_START-->([\s\S]*?)<!--CHOCOZAP_RECOVERY_END-->/);
+  const match = text.match(/<!--GYMNOTE_RECOVERY_START-->([\s\S]*?)<!--GYMNOTE_RECOVERY_END-->/);
   if (!match) return { cleanedText: text, recovery: null };
 
   const cleanedText = (text.slice(0, match.index) + text.slice(match.index + match[0].length)).trim();
@@ -2490,7 +2527,7 @@ function extractAiRecoveryFromReply(text) {
 
 // 保存 AI 恢复分析结果并刷新趋势板块的恢复进度模块
 function applyAiRecoveryAnalysis(recovery) {
-  localStorage.setItem("chocozap_recovery_ai", JSON.stringify({
+  localStorage.setItem("gymnote_recovery_ai", JSON.stringify({
     updatedAt: Date.now(),
     workoutFingerprint: getRecoveryInputFingerprint(),
     summary: recovery.summary,
@@ -2514,7 +2551,7 @@ function addAiRecommendations(rawItems) {
   if (added.length === 0) return;
 
   state.aiRecommendations = state.aiRecommendations.concat(added);
-  localStorage.setItem("chocozap_ai_recommendations", JSON.stringify(state.aiRecommendations));
+  localStorage.setItem("gymnote_ai_recommendations", JSON.stringify(state.aiRecommendations));
   renderAiRecommendations();
 }
 
@@ -2541,14 +2578,14 @@ function renderAiRecommendations() {
       <div class="ai-rec-left">
         <div class="ai-rec-avatar">${iconMap[rec.type] || "⚙️"}</div>
         <div class="ai-rec-details">
-          <span class="ai-rec-title">${rec.label}</span>
-          ${rec.intensity ? `<span class="ai-rec-intensity">${rec.intensity}</span>` : ''}
+          <span class="ai-rec-title">${escapeHtml(rec.label)}</span>
+          ${rec.intensity ? `<span class="ai-rec-intensity">${escapeHtml(rec.intensity)}</span>` : ''}
         </div>
       </div>
       <div class="ai-rec-actions">
-        <button class="ai-rec-btn ai-rec-accept" onclick="acceptAiRecommendation('${rec.id}')" title="完成并打卡">✓ 完成</button>
-        <button class="ai-rec-btn ai-rec-adjust" onclick="openAdjustRecDialog('${rec.id}')" title="调整强度/组数后再完成">✎ 调整</button>
-        <button class="ai-rec-btn ai-rec-reject" onclick="rejectAiRecommendation('${rec.id}')" title="不需要这条推荐">✕ 拒绝</button>
+        <button class="ai-rec-btn ai-rec-accept" onclick="acceptAiRecommendation(${inlineString(rec.id)})" title="完成并打卡">✓ 完成</button>
+        <button class="ai-rec-btn ai-rec-adjust" onclick="openAdjustRecDialog(${inlineString(rec.id)})" title="调整强度/组数后再完成">✎ 调整</button>
+        <button class="ai-rec-btn ai-rec-reject" onclick="rejectAiRecommendation(${inlineString(rec.id)})" title="不需要这条推荐">✕ 拒绝</button>
       </div>
     </div>
   `).join('');
@@ -2559,7 +2596,7 @@ function renderAiRecommendations() {
 // ==========================================================================
 let adjustingRecId = null;
 
-// 力量类项目 (含重量) 统一走这一套字段；ChocoZAP 配重只能以 5kg 为单位，
+// 力量类项目 (含重量) 统一走这一套字段；默认配重只能以 5kg 为单位，
 // 所以这里的步进器只给 ±5，不提供 ±1，从 UI 层面就避免调出不合法的重量
 function buildStrengthAdjustFields(d) {
   // 兼容多重量组：调整对话框以第一组为基准编辑（落地时按单组处理）
@@ -2568,7 +2605,7 @@ function buildStrengthAdjustFields(d) {
   return `
     ${(getStrengthGroups(d).length > 1) ? '<p class="settings-desc" style="margin-bottom:8px;">该推荐含多个重量组，这里以首组为准调整；如需保留多组请直接「完成」后在历史里编辑。</p>' : ''}
     <div class="form-row">
-      <label>重量 (kg) <small>—— ChocoZAP 器械以 5kg 为单位调整</small></label>
+      <label>重量 (kg) <small>—— 器械以 5kg 为单位调整</small></label>
       <div class="stepper-input">
         <button type="button" class="step-btn decrease" onclick="adjustValue('adjust-weight', -${WEIGHT_STEP_KG})">-5</button>
         <input type="number" id="adjust-weight" value="${weight}" min="0" max="300" step="${WEIGHT_STEP_KG}">
@@ -2829,7 +2866,7 @@ function saveAdjustedRecommendation() {
     rec.intensity = value + (sets ? ` x ${sets}组` : "");
   }
 
-  localStorage.setItem("chocozap_ai_recommendations", JSON.stringify(state.aiRecommendations));
+  localStorage.setItem("gymnote_ai_recommendations", JSON.stringify(state.aiRecommendations));
   closeAdjustRecDialog();
   renderAiRecommendations();
 
@@ -2886,7 +2923,7 @@ function acceptAiRecommendation(id) {
   };
 
   state.workouts.unshift(newWorkout);
-  localStorage.setItem("chocozap_workouts", JSON.stringify(state.workouts));
+  localStorage.setItem("gymnote_workouts", JSON.stringify(state.workouts));
 
   // 检查这条完成的 AI 推荐是否刷新了 PR
   checkAndCelebratePR(newWorkout);
@@ -2919,8 +2956,8 @@ function rejectAiRecommendation(id) {
 function removeAiRecommendation(id) {
   state.aiRecommendations = state.aiRecommendations.filter(r => r.id !== id);
   state.deletedIds[id] = Date.now();
-  localStorage.setItem("chocozap_ai_recommendations", JSON.stringify(state.aiRecommendations));
-  localStorage.setItem("chocozap_deleted", JSON.stringify(state.deletedIds));
+  localStorage.setItem("gymnote_ai_recommendations", JSON.stringify(state.aiRecommendations));
+  localStorage.setItem("gymnote_deleted", JSON.stringify(state.deletedIds));
 }
 
 // 生成新一轮训练菜单时，替换掉所有尚未处理的旧推荐（而不是无限堆积）。
@@ -2928,7 +2965,7 @@ function removeAiRecommendation(id) {
 function setAiRecommendations(rawItems) {
   const now = Date.now();
   state.aiRecommendations.forEach(rec => { state.deletedIds[rec.id] = now; });
-  localStorage.setItem("chocozap_deleted", JSON.stringify(state.deletedIds));
+  localStorage.setItem("gymnote_deleted", JSON.stringify(state.deletedIds));
 
   state.aiRecommendations = [];
   addAiRecommendations(rawItems);
@@ -3068,8 +3105,8 @@ function runAiQuickAction() {
 }
 
 function persistChatSessions() {
-  localStorage.setItem("chocozap_chat_sessions", JSON.stringify(state.chatSessions));
-  localStorage.setItem("chocozap_active_chat_session", state.activeChatSessionId || "");
+  localStorage.setItem("gymnote_chat_sessions", JSON.stringify(state.chatSessions));
+  localStorage.setItem("gymnote_active_chat_session", state.activeChatSessionId || "");
 }
 
 // 取得当前激活的会话，如果不存在（首次使用/被删空）则新建一个
@@ -3159,11 +3196,11 @@ function renderChatHistoryList() {
     const lastMsg = session.messages[session.messages.length - 1];
     const timeStr = lastMsg ? new Date(lastMsg.time || session.updatedAt).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' }) : '';
     return `
-      <div class="chat-history-item ${isActive ? 'active' : ''}" onclick="switchChatSession('${session.id}')">
-        <div class="chat-history-item-title">${modeBadges[getSessionMode(session)] || '💬'} ${getSessionTitle(session)}</div>
+      <div class="chat-history-item ${isActive ? 'active' : ''}" onclick="switchChatSession(${inlineString(session.id)})">
+        <div class="chat-history-item-title">${modeBadges[getSessionMode(session)] || '💬'} ${escapeHtml(getSessionTitle(session))}</div>
         <div class="chat-history-item-meta">
           <span>${timeStr}</span>
-          <button class="chat-history-delete-btn" onclick="deleteChatSession('${session.id}', event)" title="删除">🗑</button>
+          <button class="chat-history-delete-btn" onclick="deleteChatSession(${inlineString(session.id)}, event)" title="删除">🗑</button>
         </div>
       </div>
     `;
@@ -3205,7 +3242,7 @@ async function requestTrainingPlan() {
     return;
   }
 
-  const userText = "请帮我安排一份今天可以在 ChocoZAP 完成的具体训练菜单，包含项目、重量、组数等可执行的强度安排。";
+  const userText = "请根据我的可用器械，安排一份今天可以完成的具体训练菜单，包含项目、重量、组数等可执行的强度安排。";
   await callAiCoach(userText, { mode: 'menu' });
 }
 
@@ -3545,7 +3582,7 @@ function saveSettings() {
     githubGistId: githubGistId
   };
 
-  localStorage.setItem("chocozap_settings", JSON.stringify(state.settings));
+  localStorage.setItem("gymnote_settings", JSON.stringify(state.settings));
 
   // 更新设置的同步文字
   const syncStatus = document.getElementById("github-sync-status");
@@ -3587,7 +3624,7 @@ function exportData() {
   const dateStr = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
   
   a.href = url;
-  a.download = `chocozap_workout_backup_${dateStr}.json`;
+  a.download = `gymnote_workout_backup_${dateStr}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -3624,13 +3661,13 @@ function importData(event) {
             if (!mergedMap.has(id)) state.deletedIds[id] = data.deleted[id];
           });
         }
-        localStorage.setItem("chocozap_deleted", JSON.stringify(state.deletedIds));
+        localStorage.setItem("gymnote_deleted", JSON.stringify(state.deletedIds));
 
         // 转回数组并按日期从新到旧排序
         const mergedList = Array.from(mergedMap.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
 
         state.workouts = mergedList;
-        localStorage.setItem("chocozap_workouts", JSON.stringify(state.workouts));
+        localStorage.setItem("gymnote_workouts", JSON.stringify(state.workouts));
         
         // 合并身体数据（按 id 去重，本地优先）
         if (Array.isArray(data.measurements)) {
@@ -3638,7 +3675,7 @@ function importData(event) {
           data.measurements.forEach(m => { if (m && m.id) mMap.set(m.id, m); });
           (state.measurements || []).forEach(m => { if (m && m.id) mMap.set(m.id, m); });
           state.measurements = Array.from(mMap.values()).sort((a, b) => new Date(b.date) - new Date(a.date));
-          localStorage.setItem("chocozap_measurements", JSON.stringify(state.measurements));
+          localStorage.setItem("gymnote_measurements", JSON.stringify(state.measurements));
         }
 
         if (data.settings) {
@@ -3651,7 +3688,7 @@ function importData(event) {
             apiKey: keepKey,
             apiKeys: keepKeys
           };
-          localStorage.setItem("chocozap_settings", JSON.stringify(state.settings));
+          localStorage.setItem("gymnote_settings", JSON.stringify(state.settings));
           syncSettingsUI();
         }
 
@@ -3661,7 +3698,7 @@ function importData(event) {
         renderHistory();
         switchTab('dashboard');
       } else {
-        alert("导入失败：非合法的 ChocoZAP 备份 JSON 文件。");
+        alert("导入失败：非合法的 GymNote 备份 JSON 文件。");
       }
     } catch(err) {
       alert("导入失败：文件解析错误。");
@@ -3710,7 +3747,7 @@ async function resetDatabase() {
       });
       if (getResponse.ok) {
         const gistDetail = await getResponse.json();
-        const syncFile = gistDetail.files["chocozap_workouts.json"];
+        const syncFile = gistDetail.files[GIST_FILE_NAME] || gistDetail.files[LEGACY_GIST_FILE_NAME];
         if (syncFile && syncFile.content) {
           const parsed = parseCloudContent(syncFile.content);
           parsed.workouts.forEach(w => { tombstones[w.id] = now; });
@@ -3726,7 +3763,7 @@ async function resetDatabase() {
         headers: headers,
         body: JSON.stringify({
           files: {
-            "chocozap_workouts.json": {
+            [GIST_FILE_NAME]: {
               "content": JSON.stringify({ workouts: [], recommendations: [], deleted: tombstones }, null, 2)
             }
           }
@@ -3743,11 +3780,11 @@ async function resetDatabase() {
   }
 
   // 3. 清空本地历史/推荐/身体数据并保存墓碑，保持 has_run_before 状态，防止重新加载时写入 mock 数据
-  localStorage.setItem("chocozap_workouts", JSON.stringify([]));
-  localStorage.setItem("chocozap_ai_recommendations", JSON.stringify([]));
-  localStorage.setItem("chocozap_measurements", JSON.stringify([]));
-  localStorage.setItem("chocozap_deleted", JSON.stringify(tombstones));
-  localStorage.setItem("chocozap_has_run_before", "true");
+  localStorage.setItem("gymnote_workouts", JSON.stringify([]));
+  localStorage.setItem("gymnote_ai_recommendations", JSON.stringify([]));
+  localStorage.setItem("gymnote_measurements", JSON.stringify([]));
+  localStorage.setItem("gymnote_deleted", JSON.stringify(tombstones));
+  localStorage.setItem("gymnote_has_run_before", "true");
 
   // 4. 重新加载页面刷新至最空状态
   location.reload();
@@ -3834,7 +3871,7 @@ async function syncWithGithub(isSilent = false) {
   };
   
   try {
-    // 1. 如果本地没有绑定 Gist ID，先去云端搜索该账号下是否已经有已建好的 ChocoZAP 专属 Gist
+    // 1. 如果本地没有绑定 Gist ID，搜索当前或旧版文件名，避免改名后丢失云端记录。
     if (!gistId) {
       if (statusLabel) statusLabel.textContent = "正在云端检索已有存储...";
       
@@ -3846,13 +3883,12 @@ async function syncWithGithub(isSilent = false) {
         
         if (gistsResponse.ok) {
           const gists = await gistsResponse.json();
-          // 查找是否有名为 "chocozap_workouts.json" 文件的 gist
-          const foundGist = gists.find(g => g.files && g.files["chocozap_workouts.json"]);
+          const foundGist = gists.find(g => g.files && (g.files[GIST_FILE_NAME] || g.files[LEGACY_GIST_FILE_NAME]));
           
           if (foundGist) {
             gistId = foundGist.id;
             state.settings.githubGistId = gistId;
-            localStorage.setItem("chocozap_settings", JSON.stringify(state.settings));
+            localStorage.setItem("gymnote_settings", JSON.stringify(state.settings));
             
             const gistInput = document.getElementById("setting-github-gist-id");
             if (gistInput) gistInput.value = gistId;
@@ -3873,10 +3909,10 @@ async function syncWithGithub(isSilent = false) {
         method: "POST",
         headers: headers,
         body: JSON.stringify({
-          description: "ChocoZAP Workout Tracker Cloud Sync Data",
+          description: "GymNote personal workout data",
           public: false,
           files: {
-            "chocozap_workouts.json": {
+            [GIST_FILE_NAME]: {
               "content": "[]"
             }
           }
@@ -3892,7 +3928,7 @@ async function syncWithGithub(isSilent = false) {
       
       // 保存本地
       state.settings.githubGistId = gistId;
-      localStorage.setItem("chocozap_settings", JSON.stringify(state.settings));
+      localStorage.setItem("gymnote_settings", JSON.stringify(state.settings));
       
       const gistInput = document.getElementById("setting-github-gist-id");
       if (gistInput) gistInput.value = gistId;
@@ -3910,7 +3946,7 @@ async function syncWithGithub(isSilent = false) {
     if (getResponse.status === 404) {
       // 说明绑定的 Gist 已经在 GitHub 上被删除了，需要清空本地 ID 并重试
       state.settings.githubGistId = "";
-      localStorage.setItem("chocozap_settings", JSON.stringify(state.settings));
+      localStorage.setItem("gymnote_settings", JSON.stringify(state.settings));
       const gistInput = document.getElementById("setting-github-gist-id");
       if (gistInput) gistInput.value = "";
       throw new Error("云端绑定的存储已被删除，已为您重置。请重新点击同步以新建云存储！");
@@ -3921,7 +3957,7 @@ async function syncWithGithub(isSilent = false) {
     }
     
     const gistDetail = await getResponse.json();
-    const syncFile = gistDetail.files["chocozap_workouts.json"];
+    const syncFile = gistDetail.files[GIST_FILE_NAME] || gistDetail.files[LEGACY_GIST_FILE_NAME];
 
     let cloudWorkouts = [];
     let cloudRecommendations = [];
@@ -3962,9 +3998,9 @@ async function syncWithGithub(isSilent = false) {
     state.workouts = mergedList;
     state.aiRecommendations = mergedRecList;
     state.deletedIds = mergedDeleted;
-    localStorage.setItem("chocozap_workouts", JSON.stringify(state.workouts));
-    localStorage.setItem("chocozap_ai_recommendations", JSON.stringify(state.aiRecommendations));
-    localStorage.setItem("chocozap_deleted", JSON.stringify(state.deletedIds));
+    localStorage.setItem("gymnote_workouts", JSON.stringify(state.workouts));
+    localStorage.setItem("gymnote_ai_recommendations", JSON.stringify(state.aiRecommendations));
+    localStorage.setItem("gymnote_deleted", JSON.stringify(state.deletedIds));
 
     // 4. 将合并后的最新数据推回云端 Gist (新格式同时携带记录、AI 推荐和删除墓碑)
     if (statusLabel) statusLabel.textContent = "正在上传备份到云端...";
@@ -3973,7 +4009,7 @@ async function syncWithGithub(isSilent = false) {
       headers: headers,
       body: JSON.stringify({
         files: {
-          "chocozap_workouts.json": {
+          [GIST_FILE_NAME]: {
             "content": JSON.stringify({ workouts: state.workouts, recommendations: state.aiRecommendations, deleted: state.deletedIds }, null, 2)
           }
         }
