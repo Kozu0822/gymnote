@@ -288,6 +288,27 @@ body {
   transform: rotate(15deg);
 }
 
+/* 语言切换：与主题按钮同样式，但显示的是文字而非 emoji，故不做旋转 */
+.lang-toggle-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(var(--surface-rgb), 0.08);
+  background: rgba(var(--surface-rgb), 0.06);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.lang-toggle-btn:hover {
+  background: rgba(var(--surface-rgb), 0.12);
+}
+
 /* 滚动内容区 */
 .app-body {
   flex: 1;
@@ -905,7 +926,9 @@ body {
 .quick-btn {
   background: rgba(var(--surface-rgb), 0.03);
   border-radius: 18px;
-  padding: 12px 6px;
+  padding: 12px 4px;
+  min-height: 84px;
+  justify-content: center;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -932,6 +955,11 @@ body {
   font-size: 11px;
   font-weight: 500;
   color: var(--text-secondary);
+  /* 日语项目名（レッグプレス等）比中文长，允许折行并留出行高，避免被裁切 */
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* ==========================================================================
