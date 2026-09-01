@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="GymNote">
-  <title>GymNote 智能健身助手</title>
+  <title>GymNote トレーニング記録</title>
   <!-- 主题在样式表加载前就绪，避免日间/夜间切换时出现"先深后浅"的闪烁 -->
   <script>
     (function () {
@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=1.7.0">
+  <link rel="stylesheet" href="style.css?v=1.8.0">
 </head>
 <body>
   <!-- 动态流体液体背景 -->
@@ -34,10 +34,11 @@
     <header class="app-header">
       <div class="header-logo">
         <span class="logo-accent">Gym</span><span class="logo-main">Note</span>
-        <span class="logo-badge">个人版</span>
+        <span class="logo-badge" data-i18n="app.badge">パーソナル</span>
       </div>
       <div class="header-right">
-        <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="切换日间/夜间模式">🌙</button>
+        <button class="lang-toggle-btn" id="lang-toggle-btn" onclick="toggleLang()" data-i18n-title="app.langToggle" title="言語を切り替える（日本語 / 中文）">中</button>
+        <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" data-i18n-title="app.themeToggle" title="ライト / ダークモードの切り替え">🌙</button>
         <div class="header-date" id="current-date"></div>
       </div>
     </header>
@@ -48,10 +49,10 @@
       <!-- TAB 1: 仪表盘 -->
       <section id="view-dashboard" class="app-view active">
         <div class="welcome-section">
-          <h2>你好，健身达人 👋</h2>
-          <p>今天也是充满活力的一天，开始打卡吧！</p>
+          <h2 data-i18n="dash.hello">こんにちは 👋</h2>
+          <p data-i18n="dash.helloSub">今日も元気に、記録から始めましょう！</p>
           <button class="btn btn-primary btn-sm start-workout-btn welcome-cta" onclick="switchTab('log')">
-            立即打卡
+            <span data-i18n="dash.cta">今すぐ記録</span>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
         </div>
@@ -59,8 +60,8 @@
         <!-- 本周运动走势折线图 -->
         <div class="glass chart-card">
           <div class="chart-header">
-            <h3>本周运动频次</h3>
-            <span class="chart-subtitle">近7天活动</span>
+            <h3 data-i18n="dash.weeklyTitle">今週のトレーニング頻度</h3>
+            <span class="chart-subtitle" data-i18n="dash.weeklySub">直近7日間の活動</span>
           </div>
           <div class="chart-wrapper" id="weekly-chart-container">
             <!-- 由 JS 渲染的 SVG 折线图 -->
@@ -70,26 +71,26 @@
         <!-- 力量/有氧趋势分析 -->
         <div class="glass trend-card">
           <div class="chart-header">
-            <h3>训练趋势分析</h3>
-            <span class="chart-subtitle">近30天占比 / 近4周趋势</span>
+            <h3 data-i18n="dash.trendTitle">トレーニング傾向の分析</h3>
+            <span class="chart-subtitle" data-i18n="dash.trendSub">直近30日の比率 / 直近4週の推移</span>
           </div>
 
           <div class="trend-proportion-wrapper">
             <div class="trend-proportion-bar" id="trend-proportion-bar"></div>
             <div class="trend-legend">
-              <span class="trend-legend-item"><i class="trend-dot trend-dot-strength"></i><span id="trend-legend-strength">力量 0次 (0%)</span></span>
-              <span class="trend-legend-item"><i class="trend-dot trend-dot-cardio"></i><span id="trend-legend-cardio">有氧 0次 (0%)</span></span>
-              <span class="trend-legend-item"><i class="trend-dot trend-dot-other"></i><span id="trend-legend-other">其他 0次 (0%)</span></span>
+              <span class="trend-legend-item"><i class="trend-dot trend-dot-strength"></i><span id="trend-legend-strength"></span></span>
+              <span class="trend-legend-item"><i class="trend-dot trend-dot-cardio"></i><span id="trend-legend-cardio"></span></span>
+              <span class="trend-legend-item"><i class="trend-dot trend-dot-other"></i><span id="trend-legend-other"></span></span>
             </div>
           </div>
 
           <div class="trend-mini-charts">
             <div class="trend-mini-chart-block">
-              <span class="trend-mini-chart-title">力量容量趋势 (kg)</span>
+              <span class="trend-mini-chart-title" data-i18n="dash.miniVolume">筋トレ総重量の推移 (kg)</span>
               <div class="trend-mini-bars" id="trend-volume-bars"></div>
             </div>
             <div class="trend-mini-chart-block">
-              <span class="trend-mini-chart-title">有氧时长趋势 (分钟)</span>
+              <span class="trend-mini-chart-title" data-i18n="dash.miniCardio">有酸素時間の推移 (分)</span>
               <div class="trend-mini-bars" id="trend-cardio-bars"></div>
             </div>
           </div>
@@ -98,8 +99,8 @@
         <!-- AI 训练推荐 (只有存在待处理推荐时才显示) -->
         <div class="glass ai-recommendation-card" id="ai-recommendation-section" style="display: none;">
           <div class="chart-header">
-            <h3>AI 教练推荐</h3>
-            <span class="chart-subtitle">来自 AI 教练的训练建议</span>
+            <h3 data-i18n="dash.aiRecTitle">AIコーチのおすすめ</h3>
+            <span class="chart-subtitle" data-i18n="dash.aiRecSub">AIコーチからのトレーニング提案</span>
           </div>
           <div class="ai-rec-list" id="ai-recommendation-list"></div>
         </div>
@@ -108,38 +109,38 @@
         <div class="dialog-overlay" id="adjust-rec-dialog" style="display: none;">
           <div class="glass dialog-box">
             <div class="dialog-header">
-              <h3 id="adjust-rec-dialog-title">调整推荐</h3>
+              <h3 id="adjust-rec-dialog-title" data-i18n="dialog.adjustTitle">おすすめを調整</h3>
               <button class="dialog-close-btn" onclick="closeAdjustRecDialog()">×</button>
             </div>
             <div class="dialog-body" id="adjust-rec-fields">
               <!-- 由 JS 根据推荐项目类型动态渲染字段 -->
             </div>
             <div class="dialog-footer">
-              <button class="btn btn-primary" onclick="saveAdjustedRecommendation()">保存调整</button>
-              <button class="btn btn-secondary" onclick="closeAdjustRecDialog()">取消</button>
+              <button class="btn btn-primary" onclick="saveAdjustedRecommendation()" data-i18n="dialog.saveAdjust">調整を保存</button>
+              <button class="btn btn-secondary" onclick="closeAdjustRecDialog()" data-i18n="common.cancel">キャンセル</button>
             </div>
           </div>
         </div>
 
         <!-- 常用器材快捷键 -->
         <div class="quick-start-section">
-          <h3>快捷开始</h3>
+          <h3 data-i18n="dash.quickStart">クイックスタート</h3>
           <div class="quick-grid">
             <button class="quick-btn glass" onclick="startQuickLog('leg_press')">
               <span class="quick-icon">🦵</span>
-              <span>腿举</span>
+              <span data-i18n="type.leg_press">レッグプレス</span>
             </button>
             <button class="quick-btn glass" onclick="startQuickLog('shoulder_press')">
               <span class="quick-icon">💪</span>
-              <span>肩推</span>
+              <span data-i18n="type.shoulder_press">ショルダープレス</span>
             </button>
             <button class="quick-btn glass" onclick="startQuickLog('treadmill')">
               <span class="quick-icon">🏃</span>
-              <span>跑步机</span>
+              <span data-i18n="type.treadmill">ランニングマシン</span>
             </button>
             <button class="quick-btn glass" onclick="startQuickLog('massage_chair')">
               <span class="quick-icon">💆</span>
-              <span>按摩椅</span>
+              <span data-i18n="type.massage_chair">マッサージチェア</span>
             </button>
           </div>
         </div>
@@ -150,8 +151,8 @@
         <!-- 项目选择页：卡片铺满整个界面 -->
         <div id="log-select-stage">
           <div class="view-header">
-            <h2>新增健身打卡</h2>
-            <p>选择你要记录的运动项目</p>
+            <h2 data-i18n="log.newTitle">トレーニングを記録</h2>
+            <p data-i18n="log.newSub">記録する種目を選んでください</p>
           </div>
           <div class="log-project-grid" id="log-project-grid">
             <!-- 由 JS 渲染项目卡片 -->
@@ -162,12 +163,12 @@
         <div id="log-form-stage" style="display: none;">
           <button type="button" class="log-back-btn" onclick="closeLogForm()">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            返回项目
+            <span data-i18n="log.back">種目一覧へ戻る</span>
           </button>
           <div class="glass form-card">
             <div class="form-card-header">
-              <h3 id="form-title">运动项目</h3>
-              <span class="form-badge" id="form-badge-type">力量训练</span>
+              <h3 id="form-title" data-i18n="log.exercise">種目</h3>
+              <span class="form-badge" id="form-badge-type" data-i18n="cat.strengthFull">筋力トレーニング</span>
             </div>
             <form id="workout-form" onsubmit="saveWorkout(event)">
               <input type="hidden" id="input-exercise-type">
@@ -177,19 +178,19 @@
 
               <!-- 打卡日期 (支持补记过去漏打的卡) -->
               <div class="form-row">
-                <label>打卡日期 <small>—— 默认今天，也可以选过去的日期补记</small></label>
+                <label><span data-i18n="log.dateLabel">記録する日付</span> <small data-i18n="log.dateHint">—— 既定は今日。過去の日付を選んで後から追加もできます</small></label>
                 <input type="date" id="input-workout-date" class="glass-input">
               </div>
 
               <!-- 通用备注 -->
               <div class="form-row">
-                <label>运动备注 / 心得</label>
-                <textarea id="input-notes" placeholder="添加备注，如 '今天感觉轻松' 或者是器材编号" class="glass-textarea" rows="2"></textarea>
+                <label data-i18n="log.notesLabel">メモ / 感想</label>
+                <textarea id="input-notes" data-i18n-placeholder="log.notesPlaceholder" placeholder="メモを追加（例：「今日は軽かった」やマシンの番号など）" class="glass-textarea" rows="2"></textarea>
               </div>
 
               <button type="submit" class="btn btn-submit-workout btn-glowing-glow">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                <span id="log-submit-label">保存本次打卡</span>
+                <span id="log-submit-label" data-i18n="log.save">この記録を保存</span>
               </button>
             </form>
           </div>
@@ -199,25 +200,25 @@
       <!-- TAB 3: 历史记录列表 -->
       <section id="view-history" class="app-view">
         <div class="view-header">
-          <h2>健身历程</h2>
-          <p>回顾你流下的每一滴汗水</p>
+          <h2 data-i18n="hist.title">トレーニング履歴</h2>
+          <p data-i18n="hist.sub">流した汗のすべてを振り返る</p>
         </div>
 
         <!-- 历史过滤器 -->
         <div class="history-filter-bar">
           <div class="glass-select-wrapper filter-wrapper">
             <select id="filter-exercise-type" onchange="renderHistory()">
-              <option value="all">🔍 所有项目</option>
-              <option value="leg_press">🦵 腿举</option>
-              <option value="shoulder_press">💪 肩推</option>
-              <option value="chest_press">🏋️ 胸推</option>
-              <option value="preacher_curl">🧘 牧师椅</option>
-              <option value="lat_pulldown">🔽 高位下拉</option>
-              <option value="spin_bike">🚴 动感单车</option>
-              <option value="treadmill">🏃 跑步机</option>
-              <option value="situps">🧗 仰卧起坐</option>
-              <option value="massage_chair">💆 按摩椅</option>
-              <option value="custom">⚙️ 自定义</option>
+              <option value="all" data-i18n-option="hist.filterAll" data-emoji="🔍">🔍 すべての種目</option>
+              <option value="leg_press" data-i18n-option="type.leg_press" data-emoji="🦵">🦵 レッグプレス</option>
+              <option value="shoulder_press" data-i18n-option="type.shoulder_press" data-emoji="💪">💪 ショルダープレス</option>
+              <option value="chest_press" data-i18n-option="type.chest_press" data-emoji="🏋️">🏋️ チェストプレス</option>
+              <option value="preacher_curl" data-i18n-option="type.preacher_curl" data-emoji="🧘">🧘 プリーチャーカール</option>
+              <option value="lat_pulldown" data-i18n-option="type.lat_pulldown" data-emoji="🔽">🔽 ラットプルダウン</option>
+              <option value="spin_bike" data-i18n-option="type.spin_bike" data-emoji="🚴">🚴 エアロバイク</option>
+              <option value="treadmill" data-i18n-option="type.treadmill" data-emoji="🏃">🏃 ランニングマシン</option>
+              <option value="situps" data-i18n-option="type.situps" data-emoji="🧗">🧗 腹筋（シットアップ）</option>
+              <option value="massage_chair" data-i18n-option="type.massage_chair" data-emoji="💆">💆 マッサージチェア</option>
+              <option value="custom" data-i18n-option="type.custom" data-emoji="⚙️">⚙️ カスタム</option>
             </select>
           </div>
         </div>
@@ -231,15 +232,15 @@
       <!-- TAB 3.5: 训练趋势 -->
       <section id="view-trends" class="app-view">
         <div class="view-header">
-          <h2>训练趋势</h2>
-          <p>打卡日历 / 身体部位分布 / 个人最佳纪录</p>
+          <h2 data-i18n="trend.title">トレーニングの推移</h2>
+          <p data-i18n="trend.sub">カレンダー / 部位別の分布 / 自己ベスト</p>
         </div>
 
         <!-- 打卡日历 (GitHub 贡献图风格) -->
         <div class="glass calendar-card">
           <div class="chart-header">
-            <h3>打卡日历</h3>
-            <span class="chart-subtitle">近1年打卡热力图</span>
+            <h3 data-i18n="trend.calTitle">トレーニングカレンダー</h3>
+            <span class="chart-subtitle" data-i18n="trend.calSub">直近1年のヒートマップ</span>
           </div>
           <div class="calendar-heatmap-scroll" id="calendar-heatmap-scroll">
             <div class="calendar-heatmap-inner" id="calendar-heatmap-inner">
@@ -247,21 +248,21 @@
             </div>
           </div>
           <div class="calendar-legend">
-            <span>少</span>
+            <span data-i18n="trend.calLess">少</span>
             <i class="heatmap-cell level-0"></i>
             <i class="heatmap-cell level-1"></i>
             <i class="heatmap-cell level-2"></i>
             <i class="heatmap-cell level-3"></i>
             <i class="heatmap-cell level-4"></i>
-            <span>多</span>
+            <span data-i18n="trend.calMore">多</span>
           </div>
         </div>
 
         <!-- 身体数据 (体重 / 臂围 / 腰围 / 胸围) -->
         <div class="glass body-metrics-card">
           <div class="chart-header">
-            <h3>身体数据</h3>
-            <span class="chart-subtitle">体重 / 臂围 / 腰围 / 胸围</span>
+            <h3 data-i18n="trend.bodyTitle">身体データ</h3>
+            <span class="chart-subtitle" data-i18n="trend.bodySub">体重 / 腕囲 / 腹囲 / 胸囲</span>
           </div>
           <div class="body-metrics-content" id="body-metrics-content">
             <!-- 由 JS 渲染最新数值与趋势 -->
@@ -271,8 +272,8 @@
         <!-- 恢复进度 -->
         <div class="glass recovery-card">
           <div class="chart-header">
-            <h3>恢复进度</h3>
-            <span class="chart-subtitle" id="recovery-source-label">按训练量与间隔实时估算</span>
+            <h3 data-i18n="trend.recoveryTitle">疲労回復度</h3>
+            <span class="chart-subtitle" id="recovery-source-label" data-i18n="trend.recoverySourceAlgo">トレーニング量と経過時間から自動推定</span>
           </div>
           <div class="recovery-ai-summary" id="recovery-ai-summary" style="display: none;">
             <!-- AI 分析总结（由身体分析模式推送后显示） -->
@@ -285,8 +286,8 @@
         <!-- 身体部位统计 -->
         <div class="glass body-part-card">
           <div class="chart-header">
-            <h3>身体部位统计</h3>
-            <span class="chart-subtitle">近30天训练分布</span>
+            <h3 data-i18n="trend.partTitle">部位別の統計</h3>
+            <span class="chart-subtitle" data-i18n="trend.partSub">直近30日のトレーニング分布</span>
           </div>
           <div class="body-part-chart-wrap">
             <div class="body-part-donut" id="body-part-donut">
@@ -301,8 +302,8 @@
         <!-- PR 个人最佳纪录 -->
         <div class="glass pr-card">
           <div class="chart-header">
-            <h3>个人最佳纪录 (PR)</h3>
-            <span class="chart-subtitle">力量项目需连续完成2组以上才计入</span>
+            <h3 data-i18n="trend.prTitle">自己ベスト (PR)</h3>
+            <span class="chart-subtitle" data-i18n="trend.prSub">筋トレは2セット以上連続で達成した場合のみ記録</span>
           </div>
           <div class="pr-list" id="pr-list">
             <!-- 由 JS 渲染 -->
@@ -313,43 +314,43 @@
       <!-- TAB 4: AI 智能健身顾问 -->
       <section id="view-ai" class="app-view">
         <div class="view-header">
-          <h2>AI 智能健身顾问</h2>
-          <p>结合你的打卡数据，让 AI 教练给你针对性的健身建议</p>
+          <h2 data-i18n="ai.title">AIフィットネスコーチ</h2>
+          <p data-i18n="ai.sub">記録データを踏まえて、AIコーチがあなた向けの提案をします</p>
         </div>
 
         <!-- 模式选择首页 (未选择模式时显示) -->
         <div class="ai-mode-home" id="ai-mode-home">
           <button class="glass ai-mode-card" onclick="enterAiMode('chat')">
             <span class="ai-mode-icon">💬</span>
-            <span class="ai-mode-title">聊天</span>
-            <span class="ai-mode-desc">自由提问、闲聊、答疑，AI 会结合你的打卡历史给建议</span>
+            <span class="ai-mode-title" data-i18n="ai.modeChat">チャット</span>
+            <span class="ai-mode-desc" data-i18n="ai.modeChatDesc">自由に質問・相談。AIが記録の履歴を踏まえて答えます</span>
           </button>
           <button class="glass ai-mode-card" onclick="enterAiMode('menu')">
             <span class="ai-mode-icon">📋</span>
-            <span class="ai-mode-title">训练菜单</span>
-            <span class="ai-mode-desc">对话式定制训练菜单，生成后推送到主页一键打卡</span>
+            <span class="ai-mode-title" data-i18n="ai.modeMenu">トレーニングメニュー</span>
+            <span class="ai-mode-desc" data-i18n="ai.modeMenuDesc">対話でメニューを作成。ホーム画面からワンタップで記録できます</span>
           </button>
           <button class="glass ai-mode-card" onclick="enterAiMode('analysis')">
             <span class="ai-mode-icon">🩺</span>
-            <span class="ai-mode-title">身体分析</span>
-            <span class="ai-mode-desc">分析各部位训练量与恢复状况，结果推送到趋势板块</span>
+            <span class="ai-mode-title" data-i18n="ai.modeAnalysis">身体分析</span>
+            <span class="ai-mode-desc" data-i18n="ai.modeAnalysisDesc">部位ごとのトレーニング量と回復状況を分析し、推移タブに反映します</span>
           </button>
         </div>
 
         <!-- AI 对话框 (选择模式后显示) -->
         <div class="glass ai-chat-container" id="ai-chat-wrapper" style="display: none;">
           <div class="chat-toolbar">
-            <button class="chat-toolbar-btn" onclick="exitAiMode()" title="返回模式选择">
+            <button class="chat-toolbar-btn" onclick="exitAiMode()" data-i18n-title="ai.backToModes" title="モード選択に戻る">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-              <span id="ai-mode-badge">聊天</span>
+              <span id="ai-mode-badge" data-i18n="ai.modeChat">チャット</span>
             </button>
-            <button class="chat-toolbar-btn" onclick="toggleChatHistoryPanel()" title="历史对话">
+            <button class="chat-toolbar-btn" onclick="toggleChatHistoryPanel()" data-i18n-title="ai.history" title="会話履歴">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              历史对话
+              <span data-i18n="ai.history">会話履歴</span>
             </button>
-            <button class="chat-toolbar-btn" onclick="startNewChatSession()" title="开始新对话">
+            <button class="chat-toolbar-btn" onclick="startNewChatSession()" data-i18n-title="ai.newChat" title="新しい会話">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              新对话
+              <span data-i18n="ai.newChat">新しい会話</span>
             </button>
           </div>
 
@@ -359,13 +360,13 @@
 
           <!-- 输入区域 -->
           <div class="chat-input-area">
-            <textarea id="chat-input" placeholder="输入你想问的问题" class="glass-textarea" rows="2"></textarea>
+            <textarea id="chat-input" data-i18n-placeholder="ai.inputPlaceholder" placeholder="聞きたいことを入力" class="glass-textarea" rows="2"></textarea>
             <div class="chat-controls">
               <button class="btn btn-secondary btn-sm" id="ai-quick-action" onclick="runAiQuickAction()">
-                快捷操作
+                <span data-i18n="ai.quickAction">クイック操作</span>
               </button>
               <button class="btn btn-primary btn-sm btn-glowing-glow" id="btn-send-chat" onclick="sendChatMessage()">
-                发送
+                <span data-i18n="ai.send">送信</span>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
               </button>
             </div>
@@ -374,7 +375,7 @@
           <!-- 历史对话侧滑面板 -->
           <div class="chat-history-panel" id="chat-history-panel">
             <div class="chat-history-panel-header">
-              <span>历史对话</span>
+              <span data-i18n="ai.history">会話履歴</span>
               <button class="dialog-close-btn" onclick="toggleChatHistoryPanel()">×</button>
             </div>
             <div class="chat-history-list" id="chat-history-list"></div>
@@ -385,16 +386,16 @@
         <div class="dialog-overlay" id="prompt-dialog" style="display: none;">
           <div class="glass dialog-box">
             <div class="dialog-header">
-              <h3>打包成功！专属健身 Prompt 已生成</h3>
+              <h3 data-i18n="ai.promptDialogTitle">生成完了！あなた専用のプロンプトです</h3>
               <button class="dialog-close-btn" onclick="closePromptDialog()">×</button>
             </div>
             <div class="dialog-body">
-              <p>你可以直接点击复制，粘贴给大语言模型（如 Gemini、ChatGPT等）进行深度咨询：</p>
+              <p data-i18n="ai.promptDialogDesc">そのままコピーして、大規模言語モデル（Gemini や ChatGPT など）に貼り付けて相談できます：</p>
               <textarea id="prompt-content-text" readonly class="glass-textarea" rows="12"></textarea>
             </div>
             <div class="dialog-footer">
-              <button class="btn btn-primary" onclick="copyPromptText()">复制 Prompt 内容</button>
-              <button class="btn btn-secondary" onclick="closePromptDialog()">关闭</button>
+              <button class="btn btn-primary" onclick="copyPromptText()" data-i18n="ai.copyPrompt">プロンプトをコピー</button>
+              <button class="btn btn-secondary" onclick="closePromptDialog()" data-i18n="common.close">閉じる</button>
             </div>
           </div>
         </div>
@@ -403,15 +404,15 @@
       <!-- TAB 5: 设置 -->
       <section id="view-settings" class="app-view">
         <div class="view-header">
-          <h2>系统设置</h2>
-          <p>个性化配置与数据管理</p>
+          <h2 data-i18n="set.title">設定</h2>
+          <p data-i18n="set.sub">カスタマイズとデータ管理</p>
         </div>
 
         <!-- 个人资料卡 -->
         <div class="glass settings-card">
-          <h3>👤 个人身体配置</h3>
+          <h3 data-i18n="set.profileTitle">👤 身体プロフィール</h3>
           <div class="form-row">
-            <label>体重 (kg) <small>—— 精确到小数点后一位，用于精确估算跑步机等有氧消耗</small></label>
+            <label><span data-i18n="set.weightLabel">体重 (kg)</span> <small data-i18n="set.weightHint">—— 小数第1位まで。ランニングマシンなどの消費カロリー推定に使用します</small></label>
             <div class="stepper-input">
               <button type="button" class="step-btn decrease" onclick="adjustValue('setting-weight', -0.5)">-</button>
               <input type="number" id="setting-weight" value="70.0" min="30" max="250" step="0.1" onchange="saveSettings()">
@@ -422,15 +423,15 @@
 
         <!-- AI 配置卡 -->
         <div class="glass settings-card">
-          <h3>🤖 AI 健身教练配置</h3>
-          <p class="settings-desc">支持 Anthropic Claude、Google Gemini 与 <strong>ChatGPT（OpenAI）</strong>。API Key 仅保存在本地浏览器中，不上传任何服务器；ChatGPT 订阅与 OpenAI API 用量分开计费。</p>
+          <h3 data-i18n="set.aiTitle">🤖 AIコーチの設定</h3>
+          <p class="settings-desc" data-i18n-html="set.aiDesc">Anthropic Claude、Google Gemini、<strong>ChatGPT（OpenAI）</strong>に対応。API キーはこのブラウザ内にのみ保存され、どのサーバーにも送信されません。ChatGPT のサブスクリプションと OpenAI API の利用料は別会計です。</p>
           <div class="form-row">
-            <label>AI 模型提供方</label>
+            <label data-i18n="set.providerLabel">AI プロバイダー</label>
             <div class="glass-select-wrapper">
               <select id="setting-api-provider" onchange="onProviderChange()">
-                <option value="claude">Claude (Anthropic，推荐)</option>
-                <option value="gemini">Gemini (Google)</option>
-                <option value="openai">ChatGPT (OpenAI)</option>
+                <option value="claude" data-i18n="set.providerClaude">Claude (Anthropic・推奨)</option>
+                <option value="gemini" data-i18n="set.providerGemini">Gemini (Google)</option>
+                <option value="openai" data-i18n="set.providerOpenai">ChatGPT (OpenAI)</option>
               </select>
             </div>
           </div>
@@ -439,49 +440,49 @@
             <input type="password" id="setting-api-key" placeholder="sk-ant-..." class="glass-input" onchange="saveSettings()">
           </div>
           <div class="form-row">
-            <label>模型选择</label>
+            <label data-i18n="set.modelLabel">モデルの選択</label>
             <div class="glass-select-wrapper">
               <select id="setting-api-model" onchange="saveSettings()">
                 <!-- 由 JS 根据提供方动态填充 -->
               </select>
             </div>
           </div>
-          <p class="settings-desc" id="setting-api-hint" style="margin-top: 8px;">在 <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic 控制台</a> 申请 Claude API Key。</p>
+          <p class="settings-desc" id="setting-api-hint" style="margin-top: 8px;" data-i18n-html="set.hintClaude"><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Anthropic コンソール</a>で Claude の API キーを取得してください。</p>
         </div>
 
         <!-- GitHub 自动云端同步 -->
         <div class="glass settings-card">
-          <h3>☁️ GitHub Pages 自动云同步</h3>
-          <p class="settings-desc">利用您已有的 GitHub 账号免费作为云数据库！配置后，手机和电脑端的数据会在保存或加载时自动、私密地合并同步。</p>
+          <h3 data-i18n="set.syncTitle">☁️ GitHub による自動クラウド同期</h3>
+          <p class="settings-desc" data-i18n="set.syncDesc">お持ちの GitHub アカウントを無料のクラウドデータベースとして利用します。設定すると、スマートフォンと PC のデータが保存時・読み込み時に自動でプライベートに同期されます。</p>
           <div class="form-row">
-            <label>GitHub Personal Access Token (PAT) <small>—— 需要 gist 权限</small></label>
+            <label><span data-i18n="set.tokenLabel">GitHub Personal Access Token (PAT)</span> <small data-i18n="set.tokenHint">—— gist 権限のみ必要です</small></label>
             <input type="password" id="setting-github-token" placeholder="ghp_ 或 github_pat_..." class="glass-input" onchange="saveSettings()">
           </div>
           <div class="form-row">
-            <label>Gist 标识 (Gist ID) <small>—— 自动生成绑定</small></label>
-            <input type="text" id="setting-github-gist-id" placeholder="保存 Token 并同步会自动绑定，也可手动粘贴别人的 Gist ID" class="glass-input" onchange="saveSettings()">
+            <label><span data-i18n="set.gistLabel">Gist ID</span> <small data-i18n="set.gistHint">—— 自動で生成・紐づけされます</small></label>
+            <input type="text" id="setting-github-gist-id" data-i18n-placeholder="set.gistPlaceholder" placeholder="トークンを保存して同期すると自動で紐づきます。他の Gist ID を貼り付けることもできます" class="glass-input" onchange="saveSettings()">
           </div>
           <div class="settings-action-row">
             <button class="btn btn-primary btn-sm btn-glowing-glow" id="btn-github-sync" onclick="syncWithGithub()">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="sync-icon-spin" id="sync-svg-icon"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
-              <span>立即同步云端数据</span>
+              <span data-i18n="set.syncBtn">今すぐ同期</span>
             </button>
-            <span class="sync-status" id="github-sync-status" style="font-size: 11px; color: var(--text-secondary); align-self: center; margin-left: 10px;">未配置同步</span>
+            <span class="sync-status" id="github-sync-status" style="font-size: 11px; color: var(--text-secondary); align-self: center; margin-left: 10px;" data-i18n="sync.statusNone">同期は未設定</span>
           </div>
         </div>
 
         <!-- 数据备份与迁移 -->
         <div class="glass settings-card">
-          <h3>💾 数据导入与导出</h3>
-          <p class="settings-desc">为避免浏览器清理缓存导致打卡记录丢失，建议您定期备份数据。</p>
+          <h3 data-i18n="set.backupTitle">💾 データの書き出しと読み込み</h3>
+          <p class="settings-desc" data-i18n="set.backupDesc">ブラウザのキャッシュ削除による記録の消失を防ぐため、定期的なバックアップをおすすめします。</p>
           <div class="settings-action-row">
             <button class="btn btn-secondary btn-sm" onclick="exportData()">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-              导出备份 (JSON)
+              <span data-i18n="set.export">バックアップを書き出す (JSON)</span>
             </button>
             <button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-file-input').click()">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-              导入备份 (JSON)
+              <span data-i18n="set.import">バックアップを読み込む (JSON)</span>
             </button>
             <input type="file" id="import-file-input" style="display: none;" accept=".json" onchange="importData(event)">
           </div>
@@ -489,11 +490,11 @@
 
         <!-- 系统操作 -->
         <div class="glass settings-card border-danger">
-          <h3 class="text-danger">⚠️ 危险操作</h3>
-          <p class="settings-desc">清空所有保存在本地的健身记录。此操作不可逆！</p>
+          <h3 class="text-danger" data-i18n="set.dangerTitle">⚠️ 取り扱い注意</h3>
+          <p class="settings-desc" data-i18n="set.dangerDesc">ローカルに保存されたトレーニング記録をすべて削除します。この操作は取り消せません。</p>
           <button class="btn btn-danger btn-sm" onclick="resetDatabase()">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-            清空所有健身数据
+            <span data-i18n="set.resetBtn">すべてのデータを削除</span>
           </button>
         </div>
       </section>
@@ -504,31 +505,31 @@
     <nav class="app-nav glass">
       <div class="nav-logo">
         <span class="logo-accent">Gym</span><span class="logo-main">Note</span>
-        <span class="logo-badge">个人版</span>
+        <span class="logo-badge" data-i18n="app.badge">パーソナル</span>
       </div>
       <button class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="nav-icon"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        <span>主页</span>
+        <span data-i18n="nav.home">ホーム</span>
       </button>
       <button class="nav-item" data-tab="log" onclick="switchTab('log')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="nav-icon"><polygon points="14 2 18 6 7 17 3 17 3 13 14 2"/><line x1="3" y1="22" x2="21" y2="22"/></svg>
-        <span>打卡</span>
+        <span data-i18n="nav.log">記録</span>
       </button>
       <button class="nav-item" data-tab="history" onclick="switchTab('history')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="nav-icon"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/><line x1="16" y1="18" x2="16" y2="18"/></svg>
-        <span>历史</span>
+        <span data-i18n="nav.history">履歴</span>
       </button>
       <button class="nav-item" data-tab="trends" onclick="switchTab('trends')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="nav-icon"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-        <span>趋势</span>
+        <span data-i18n="nav.trends">推移</span>
       </button>
       <button class="nav-item" data-tab="ai" onclick="switchTab('ai')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="nav-icon"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        <span>AI教练</span>
+        <span data-i18n="nav.ai">AIコーチ</span>
       </button>
       <button class="nav-item" data-tab="settings" onclick="switchTab('settings')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="nav-icon"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span>设置</span>
+        <span data-i18n="nav.settings">設定</span>
       </button>
     </nav>
 
@@ -537,6 +538,7 @@
     <div class="pr-toast" id="pr-toast"></div>
   </div>
 
-  <script src="app.js?v=1.7.0"></script>
+  <script src="i18n.js?v=1.8.0"></script>
+  <script src="app.js?v=1.8.0"></script>
 </body>
 </html>
